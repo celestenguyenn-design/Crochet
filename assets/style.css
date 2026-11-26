@@ -370,3 +370,7 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--p
   .signup-tab { top: auto; bottom: 18px; transform: none; writing-mode: horizontal-tb; border-radius: 999px; left: 12px; padding: 9px 14px; font-size: .85rem; }
 }
 @media print { .signup-tab { display: none; } }
+
+/* ===== Payment QR code ===== */
+.pay-qr { text-align: center; margin: 14px 0; }
+.pay-qr img { width: 220px; max-width: 70vw; margin: 0 auto 6px; border-radius: 16px; background: #fff; padding: 8px; box-shadow: var(--shadow); }

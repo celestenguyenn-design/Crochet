@@ -976,6 +976,12 @@ function loadSettings() {
     <div class="row"><div><label>Zelle (email or phone)</label><input name="zelle_handle" value="${esc(s.zelle_handle)}"></div>
       <div><label>Venmo username</label><input name="venmo_handle" value="${esc(s.venmo_handle)}" placeholder="@yourname"></div></div>
     <label>PayPal email</label><input name="paypal_email" type="email" value="${esc(s.paypal_email)}">
+    <p class="muted" style="font-size:.9rem; margin-top:14px">QR codes show on the thank-you screen and order-status page for whichever app the customer picked. Leave blank to hide.</p>
+    <div class="row">
+      <div>${imgField("zelle_qr_url", "Zelle QR code", s.zelle_qr_url)}</div>
+      <div>${imgField("venmo_qr_url", "Venmo QR code", s.venmo_qr_url)}</div>
+    </div>
+    ${imgField("paypal_qr_url", "PayPal QR code (optional)", s.paypal_qr_url)}
     <label>Deposit required (% of the total, paid before you start)</label>
     <input name="deposit_percent" type="number" min="0" max="100" value="${s.deposit_percent ?? 50}">
     <p class="muted" style="font-size:.9rem">50 = half up front, the rest at pickup/before shipping. 100 = pay everything up front. 0 = no deposit (then "Pay at pickup" can be offered).</p>
@@ -990,6 +996,7 @@ function loadSettings() {
     <label>Order note (shown on product pages & checkout)</label><input name="order_note" value="${esc(s.order_note)}" placeholder="e.g. Please allow up to 2 weeks for shipping.">
     <label>Pickup instructions (shown after ordering)</label><textarea name="pickup_instructions">${esc(s.pickup_instructions)}</textarea>
     <button class="btn" style="margin-top:16px">Save</button></form>`;
+  wireUploads($("settings-form"));
   $("settings-form").addEventListener("submit", async (e) => {
     e.preventDefault();
     const f = Object.fromEntries(new FormData(e.target));

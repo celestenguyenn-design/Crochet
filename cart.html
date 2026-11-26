@@ -179,6 +179,8 @@ $("form").addEventListener("submit", async (e) => {
     payMsg = `<p>Send your <b>${amt} ${what}</b> by <b>PayPal</b> to <b>${esc(s.paypal_email)}</b> with <b>Order #${n}</b> in the note.</p>
       <p><a class="btn" href="https://www.paypal.com/myaccount/transfer/homepage/pay" target="_blank" rel="noopener">Open PayPal</a></p>`;
   } else payMsg = `<p>You'll pay <b>${money(data.total_cents)}</b> when you pick up.</p>`;
+  const qr = safeUrl(s[data.payment_method + "_qr_url"]);
+  if (qr) payMsg += `<div class="pay-qr"><img src="${esc(qr)}" alt="${esc(data.payment_method)} QR code"><p class="muted">Scan with your phone's camera or ${data.payment_method === "zelle" ? "your bank app" : "the app"} to pay</p></div>`;
   $("checkout-view").style.display = "none";
   const done = $("done-view");
   done.style.display = "";
