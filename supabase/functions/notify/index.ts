@@ -82,6 +82,17 @@ Deno.serve(async (req) => {
       }
       return Response.json({ ok: true });
     }
+    if (type === "contact") {
+      const { data: m } = await db.from("contact_messages").update({ notified_at: new Date().toISOString() })
+        .eq("id", id).is("notified_at", null).select("*").maybeSingle();
+      if (!m) return Response.json({ skipped: "already notified" });
+      await send(OWNER_EMAIL, `💌 ${m.subject || "New message"} – from ${m.name}`, wrap(s, `
+        <p><b>${esc(m.name)}</b> (${esc(m.email)}) sent a message from your Contact page:</p>
+        <p><b>${esc(m.subject)}</b></p>
+        <p style="white-space:pre-wrap">${esc(m.message)}</p>
+        <p style="color:#888">Just hit Reply to answer them.</p>`), m.email);
+      return Response.json({ ok: true });
+    }
     return Response.json({ error: "unknown type" }, { status: 400 });
   } catch (e) {
     console.error(e);

@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title></title>
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="assets/favicon-32.png" sizes="32x32">
+<link rel="apple-touch-icon" href="assets/favicon.png">
 <link rel="stylesheet" href="assets/style.css">
 </head>
 <body>
@@ -40,6 +43,7 @@ else {
         <button class="btn" id="add" ${soldOut ? "disabled" : ""}>${soldOut ? "Sold out" : "Add to cart"}</button>
       </div>
       <p class="error" id="err"></p>
+      ${s.order_note ? `<p class="order-note">⏳ ${esc(s.order_note)}</p>` : ""}
       <a class="bigger-link" href="custom.html?item=${encodeURIComponent(p.name)}">📏 Want it bigger or in different colors? Request a custom version →</a>
       <div class="desc-full">${md(p.description)}</div>
     </div>

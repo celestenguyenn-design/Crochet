@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Custom Orders</title>
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="assets/favicon-32.png" sizes="32x32">
+<link rel="apple-touch-icon" href="assets/favicon.png">
 <link rel="stylesheet" href="assets/style.css">
 </head>
 <body>
@@ -22,17 +25,19 @@
       <div><label>Colors</label><input name="colors" maxlength="500"></div>
       <div><label>Size</label><input name="size" maxlength="500"></div>
     </div>
-    <div class="row">
-      <div><label>Budget</label><input name="budget" maxlength="200"></div>
-      <div><label>Needed by</label><input name="needed_by" type="date"></div>
-    </div>
+    <label>Photos or inspiration (optional, up to 4)</label>
+    <p class="muted" style="margin:0 0 6px; font-size:.9rem">A picture of the character, colors, or something similar you've seen helps a lot!</p>
+    <label class="photo-drop" for="photos">📷 Tap to add photos</label>
+    <input id="photos" type="file" accept="image/*" multiple hidden>
+    <div class="photo-previews" id="previews"></div>
+    <p class="muted" style="font-size:.9rem; margin-top:14px">⏳ Custom pieces take time — I'll let you know how long yours will take when I send your quote.</p>
     <p class="error" id="err"></p>
     <button class="btn" id="submit">Send request</button>
   </form>
   <div id="done" class="notice" style="display:none"><h2>Request sent! 💌</h2><p>Thanks! I'll email you soon with a quote.</p></div>
 </main>
 <script type="module">
-import { sb, getSettings, renderChrome } from "./assets/common.js";
+import { sb, getSettings, renderChrome, toast } from "./assets/common.js";
 renderChrome(await getSettings(), "custom");
 const item = new URLSearchParams(location.search).get("item");
 if (item) {
@@ -40,13 +45,48 @@ if (item) {
   d.value = `I'd like a custom version of "${item.slice(0, 120)}":\n- Size: \n- Anything else: `;
   document.querySelector("[name=size]").placeholder = "e.g. twice as big";
 }
+// ----- Photos: shrink on the phone before uploading (faster, smaller) -----
+let photos = [];
+const previews = document.getElementById("previews");
+const paint = () => {
+  previews.innerHTML = photos.map((p, i) => `<div><img src="${p.url}" alt=""><button type="button" data-rm="${i}" aria-label="Remove">✕</button></div>`).join("");
+  document.querySelector(".photo-drop").style.display = photos.length >= 4 ? "none" : "";
+};
+previews.addEventListener("click", (e) => { const i = e.target.dataset.rm; if (i !== undefined) { URL.revokeObjectURL(photos[i].url); photos.splice(i, 1); paint(); } });
+async function shrink(file) {
+  try {
+    const bmp = await createImageBitmap(file);
+    const scale = Math.min(1, 1600 / Math.max(bmp.width, bmp.height));
+    const c = document.createElement("canvas"); c.width = Math.round(bmp.width * scale); c.height = Math.round(bmp.height * scale);
+    c.getContext("2d").drawImage(bmp, 0, 0, c.width, c.height);
+    return await new Promise((res) => c.toBlob(res, "image/jpeg", 0.85));
+  } catch { return file.size <= 10e6 ? file : null; } // couldn't shrink (e.g. unusual format): send as-is if small enough
+}
+document.getElementById("photos").addEventListener("change", async (e) => {
+  for (const file of [...e.target.files].slice(0, 4 - photos.length)) {
+    const blob = await shrink(file);
+    if (!blob) { toast("That photo is too big — try another"); continue; }
+    photos.push({ blob, url: URL.createObjectURL(blob) });
+  }
+  e.target.value = ""; paint();
+});
+
 document.getElementById("form").addEventListener("submit", async (e) => {
   e.preventDefault();
   const f = Object.fromEntries(new FormData(e.target));
-  if (!f.needed_by) f.needed_by = null;
   const btn = document.getElementById("submit"); btn.disabled = true;
+  f.photo_paths = [];
+  for (const [i, p] of photos.entries()) {
+    btn.textContent = `Uploading photo ${i + 1} of ${photos.length}…`;
+    const ext = p.blob.type === "image/jpeg" ? "jpg" : (p.blob.type.split("/")[1] || "jpg").replace("jpeg", "jpg");
+    const path = `${crypto.randomUUID()}.${ext}`;
+    const { error } = await sb.storage.from("request-photos").upload(path, p.blob, { contentType: p.blob.type || "image/jpeg" });
+    if (error) { document.getElementById("err").textContent = "A photo didn't upload — try a different one, or send without it."; btn.disabled = false; btn.textContent = "Send request"; return; }
+    f.photo_paths.push(path);
+  }
+  btn.textContent = "Sending…";
   const { error } = await sb.from("custom_requests").insert(f);
-  if (error) { document.getElementById("err").textContent = error.message; btn.disabled = false; return; }
+  if (error) { document.getElementById("err").textContent = error.message; btn.disabled = false; btn.textContent = "Send request"; return; }
   e.target.style.display = "none"; document.getElementById("done").style.display = "";
 });
 </script>

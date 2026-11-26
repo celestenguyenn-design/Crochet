@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
 <title>Admin</title>
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="assets/favicon-32.png" sizes="32x32">
+<link rel="apple-touch-icon" href="assets/favicon.png">
 <link rel="stylesheet" href="assets/style.css">
 <style>
   .tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 24px; }
@@ -53,6 +56,8 @@
   .hp-frame-wrap { background: var(--line); border-radius: var(--radius); padding: 10px; display: flex; justify-content: center; }
   #hp-frame { width: 100%; height: 78vh; border: 0; border-radius: calc(var(--radius) - 6px); background: #fff; transition: width .3s; }
   @media (max-width: 960px) { .hp-preview { position: static; } #hp-frame { height: 70vh; } }
+  .req-photos { display: flex; gap: 10px; flex-wrap: wrap; margin: 6px 0 10px; }
+  .req-photos img { width: 110px; height: 110px; object-fit: cover; border-radius: 12px; }
   .gal-admin { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
   .gal-admin img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 12px; }
   dialog { border: 0; border-radius: var(--radius); padding: 0; width: min(760px, 95vw); background: var(--bg); color: var(--text); }
@@ -74,6 +79,7 @@
     <div class="tabs" id="tabs">
       <button data-tab="orders" class="active">Orders</button>
       <button data-tab="requests">Custom Requests</button>
+      <button data-tab="messages">Messages</button>
       <button data-tab="products">Products</button>
       <button data-tab="homepage">Homepage</button>
       <button data-tab="gallery">Gallery</button>
@@ -86,6 +92,7 @@
     </div>
     <section id="tab-orders"></section>
     <section id="tab-requests" hidden></section>
+    <section id="tab-messages" hidden></section>
     <section id="tab-products" hidden></section>
     <section id="tab-homepage" hidden></section>
     <section id="tab-gallery" hidden></section>
@@ -129,7 +136,7 @@ $("login").addEventListener("submit", async (e) => {
 $("logout").addEventListener("click", async (e) => { e.preventDefault(); await sb.auth.signOut(); boot(); });
 
 // ---------- Tabs ----------
-const loaders = { orders: loadOrders, requests: loadRequests, products: loadProducts, homepage: loadHomepage, gallery: loadGallery, reviews: loadReviews, pages: loadPages, marketing: loadMarketing, patterns: loadPatterns, appearance: loadAppearance, settings: loadSettings };
+const loaders = { orders: loadOrders, requests: loadRequests, messages: loadMessages, products: loadProducts, homepage: loadHomepage, gallery: loadGallery, reviews: loadReviews, pages: loadPages, marketing: loadMarketing, patterns: loadPatterns, appearance: loadAppearance, settings: loadSettings };
 function showTab(name) {
   document.querySelectorAll("#tabs button").forEach((b) => b.classList.toggle("active", b.dataset.tab === name));
   document.querySelectorAll("#app > section").forEach((s) => (s.hidden = s.id !== "tab-" + name));
@@ -216,11 +223,19 @@ async function loadRequests() {
   const el = $("tab-requests");
   const { data, error } = await sb.from("custom_requests").select("*").order("created_at", { ascending: false });
   if (error) { el.innerHTML = `<p class="error">${esc(error.message)}</p>`; return; }
+  // Customer photos are private: get temporary links to show them here
+  const allPaths = data.flatMap((r) => r.photo_paths || []);
+  const signed = {};
+  if (allPaths.length) {
+    const { data: urls } = await sb.storage.from("request-photos").createSignedUrls(allPaths, 3600);
+    (urls || []).forEach((u) => { if (u.signedUrl) signed[u.path] = u.signedUrl; });
+  }
   el.innerHTML = `<div class="list">${data.length ? data.map((r) => `<div class="card">
     <div class="head"><h3>${esc(r.name)}</h3><span class="pill">${label(r.status)}</span></div>
     <div class="muted">${fmtDate(r.created_at)} · ${esc(r.email)} ${r.phone ? "· " + esc(r.phone) : ""}</div>
     <p style="white-space:pre-wrap">${esc(r.description)}</p>
     <p class="muted">${[r.colors && "Colors: " + esc(r.colors), r.size && "Size: " + esc(r.size), r.budget && "Budget: " + esc(r.budget), r.needed_by && "Needed by: " + esc(r.needed_by)].filter(Boolean).join(" · ")}</p>
+    ${(r.photo_paths || []).length ? `<div class="req-photos">${r.photo_paths.map((ph) => `<a href="${esc(signed[ph] || "#")}" target="_blank" rel="noopener"><img src="${esc(signed[ph] || "")}" alt="Customer photo"></a>`).join("")}</div>` : ""}
     <div class="inline">
       <div><label>Status</label><select name="status">${REQ_STATUSES.map((s) => `<option value="${s}" ${s === r.status ? "selected" : ""}>${label(s)}</option>`).join("")}</select></div>
       <div><label>Quote ($)</label><input name="quote" type="number" step="0.01" min="0" value="${r.quote_cents != null ? (r.quote_cents / 100).toFixed(2) : ""}"></div>
@@ -236,7 +251,9 @@ async function loadRequests() {
     toast(error ? error.message : "Saved"); loadRequests();
   });
   el.querySelectorAll("[data-del]").forEach((b) => b.onclick = async () => {
-    if (!confirm("Delete this request?")) return;
+    if (!confirm("Delete this request (and its photos)?")) return;
+    const req = data.find((r) => r.id === b.dataset.del);
+    if (req?.photo_paths?.length) await sb.storage.from("request-photos").remove(req.photo_paths);
     await sb.from("custom_requests").delete().eq("id", b.dataset.del); loadRequests();
   });
 }
@@ -543,6 +560,23 @@ function pageDialog(pg) {
   };
 }
 
+// ---------- Messages (Contact page) ----------
+async function loadMessages() {
+  const el = $("tab-messages");
+  const { data, error } = await sb.from("contact_messages").select("*").order("created_at", { ascending: false }).limit(300);
+  if (error) { el.innerHTML = `<p class="error">${esc(error.message)}</p>`; return; }
+  el.innerHTML = `<p class="muted">Messages from your Contact page. You also get an email for each one. Tap <b>Reply</b> to answer by email.</p>
+    <div class="list">${data.map((m) => `<div class="card" style="${m.handled ? "opacity:.6" : ""}">
+      <div class="head"><h3>${esc(m.name)} <span class="pill">${esc(m.subject || "Message")}</span></h3>${m.handled ? `<span class="pill paid">Done</span>` : `<span class="pill unpaid">New</span>`}</div>
+      <div class="muted">${fmtDate(m.created_at)} · ${esc(m.email)}</div>
+      <p style="white-space:pre-wrap">${esc(m.message)}</p>
+      <div class="inline"><a class="btn small" href="mailto:${encodeURIComponent(m.email)}?subject=${encodeURIComponent("Re: " + (m.subject || "your message"))}">Reply</a>
+        <button class="btn small secondary" data-done="${m.id}" data-v="${!m.handled}">${m.handled ? "Mark as new" : "Mark done"}</button>
+        <button class="btn small danger" data-del="${m.id}">Delete</button></div></div>`).join("") || `<p class="muted">No messages yet.</p>`}</div>`;
+  el.querySelectorAll("[data-done]").forEach((b) => b.onclick = async () => { await sb.from("contact_messages").update({ handled: b.dataset.v === "true" }).eq("id", b.dataset.done); loadMessages(); });
+  el.querySelectorAll("[data-del]").forEach((b) => b.onclick = async () => { if (confirm("Delete this message?")) { await sb.from("contact_messages").delete().eq("id", b.dataset.del); loadMessages(); } });
+}
+
 // ---------- Marketing: discount codes + email list ----------
 async function loadMarketing() {
   const el = $("tab-marketing");
@@ -550,9 +584,17 @@ async function loadMarketing() {
     sb.from("discount_codes").select("*").order("created_at", { ascending: false }),
     sb.from("subscribers").select("*").order("created_at", { ascending: false }),
   ]);
-  const desc = (c) => (c.percent_off ? `${c.percent_off}% off` : `${money(c.amount_off_cents)} off`) + (c.min_subtotal_cents ? ` orders ${money(c.min_subtotal_cents)}+` : "");
+  const desc = (c) => (c.percent_off ? `${c.percent_off}% off` : `${money(c.amount_off_cents)} off`) + (c.min_subtotal_cents ? ` orders ${money(c.min_subtotal_cents)}+` : "") + (c.first_order_only ? " · first order only" : "");
   const state = (c) => !c.active ? "Off" : c.expires_at && new Date(c.expires_at) < new Date() ? "Expired" : c.max_uses && c.uses >= c.max_uses ? "Used up" : "Active";
-  el.innerHTML = `<div class="card" style="margin-bottom:22px"><h2>🏷️ Discount codes</h2>
+  el.innerHTML = `<form id="popup-form" class="card" style="margin-bottom:22px"><h2>💌 "10% off" sign-up pop-up</h2>
+    <p class="muted">Pops up once for new visitors (after a few seconds) with your logo. When they sign up, they're shown the code below. It won't show again for 2 weeks if they close it.</p>
+    <label style="font-weight:400"><input type="checkbox" name="signup_popup_enabled" ${settings.signup_popup_enabled ? "checked" : ""}>Show the pop-up</label>
+    <label>Headline</label><input name="signup_offer_title" value="${esc(settings.signup_offer_title)}">
+    <label>Text</label><textarea name="signup_offer_text" style="min-height:70px">${esc(settings.signup_offer_text)}</textarea>
+    <label>Code they get</label><input name="signup_offer_code" value="${esc(settings.signup_offer_code)}" style="text-transform:uppercase">
+    <p class="muted" style="font-size:.9rem">Make sure this code exists below. WELCOME10 (10% off, first order only) is already set up.</p>
+    <button class="btn" style="margin-top:10px">Save pop-up</button></form>
+  <div class="card" style="margin-bottom:22px"><h2>🏷️ Discount codes</h2>
     <p class="muted">Customers type these at checkout. Tip: share a code on Instagram or on a sign at your market table.</p>
     <form id="code-form" class="card" style="box-shadow:none; border:1px dashed var(--line)">
       <div class="row"><div><label>Code</label><input name="code" required placeholder="MARKET10" maxlength="30" style="text-transform:uppercase"></div>
@@ -561,6 +603,7 @@ async function loadMarketing() {
       <div class="row"><div><label>Minimum order ($, optional)</label><input name="min" type="number" min="0" step="0.01"></div>
         <div><label>Max uses (optional)</label><input name="max" type="number" min="1"></div></div>
       <label>Ends on (optional)</label><input name="expires" type="date">
+      <label style="font-weight:400"><input type="checkbox" name="first">First order only (each email can use it once, on their first order)</label>
       <button class="btn" style="margin-top:14px">+ Create code</button></form>
     <div class="list" style="margin-top:14px">${(codes || []).map((c) => `<div class="card head" style="align-items:center; box-shadow:none; border:1px solid var(--line)">
       <div><b style="font-family:monospace; font-size:1.1rem">${esc(c.code)}</b> <span class="pill ${state(c) === "Active" ? "paid" : ""}">${state(c)}</span><br>
@@ -573,11 +616,17 @@ async function loadMarketing() {
     <div class="list">${(subs || []).map((x) => `<div class="inline" style="align-items:center; margin-top:6px"><div>${esc(x.email)} <span class="muted" style="font-size:.85rem">· ${new Date(x.created_at).toLocaleDateString()}${x.source ? " · from " + esc(x.source) : ""}</span></div>
       <button class="btn small danger" data-delsub="${x.id}">Remove</button></div>`).join("") || `<p class="muted">No sign-ups yet.</p>`}</div></div>`;
 
+  $("popup-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const f = Object.fromEntries(new FormData(e.target));
+    await saveSettings({ signup_popup_enabled: f.signup_popup_enabled === "on", signup_offer_title: f.signup_offer_title, signup_offer_text: f.signup_offer_text,
+      signup_offer_code: f.signup_offer_code.trim().toUpperCase() });
+  });
   $("code-form").addEventListener("submit", async (e) => {
     e.preventDefault();
     const f = new FormData(e.target), amt = parseFloat(f.get("amount"));
     const row = { code: f.get("code").trim().toUpperCase().replace(/\s+/g, ""), min_subtotal_cents: f.get("min") ? toCents(f.get("min")) : 0,
-      max_uses: f.get("max") ? parseInt(f.get("max")) : null, expires_at: f.get("expires") ? new Date(f.get("expires") + "T23:59:59").toISOString() : null };
+      max_uses: f.get("max") ? parseInt(f.get("max")) : null, first_order_only: f.get("first") === "on", expires_at: f.get("expires") ? new Date(f.get("expires") + "T23:59:59").toISOString() : null };
     if (f.get("kind") === "percent") { if (amt > 100) return toast("Percent can't be over 100"); row.percent_off = Math.round(amt); } else row.amount_off_cents = toCents(amt);
     const { error } = await sb.from("discount_codes").insert(row);
     toast(error ? (error.code === "23505" ? "That code already exists" : error.code === "23514" ? "Codes can only use letters, numbers, - and _" : error.message) : "Code created!");
@@ -763,6 +812,7 @@ function loadSettings() {
     <label style="font-weight:400"><input type="checkbox" name="allow_pay_at_pickup" ${s.allow_pay_at_pickup ? "checked" : ""}>Allow "Pay at pickup"</label>
     <h2 style="margin-top:28px">Pickup</h2>
     <label>Pickup location (shown at checkout)</label><input name="pickup_location" value="${esc(s.pickup_location)}" placeholder="e.g. Downtown Austin. Exact address sent after ordering.">
+    <label>Order note (shown on product pages & checkout)</label><input name="order_note" value="${esc(s.order_note)}" placeholder="e.g. Please allow up to 2 weeks for shipping.">
     <label>Pickup instructions (shown after ordering)</label><textarea name="pickup_instructions">${esc(s.pickup_instructions)}</textarea>
     <button class="btn" style="margin-top:16px">Save</button></form>`;
   $("settings-form").addEventListener("submit", async (e) => {

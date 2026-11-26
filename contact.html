@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Contact</title>
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="assets/favicon-32.png" sizes="32x32">
+<link rel="apple-touch-icon" href="assets/favicon.png">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<header id="site-header"></header>
+<main class="container article">
+  <h1>Contact me</h1>
+  <p class="muted">Questions about an order, a market, or anything else? Send me a message and I'll get back to you soon. 💌</p>
+  <div class="contact-quick" id="quick"></div>
+  <form id="form" class="card">
+    <div class="row">
+      <div><label>Your name *</label><input name="name" required maxlength="200"></div>
+      <div><label>Email *</label><input name="email" type="email" required maxlength="200"></div>
+    </div>
+    <label>Subject</label>
+    <select name="subject">
+      <option>General question</option><option>About my order</option><option>Custom order idea</option><option>Markets & events</option><option>Wholesale / collab</option><option>Something else</option>
+    </select>
+    <label>Message *</label><textarea name="message" required maxlength="5000"></textarea>
+    <p class="error" id="err"></p>
+    <button class="btn" id="submit">Send message</button>
+  </form>
+  <div id="done" class="notice" style="display:none"><h2>Message sent! 💕</h2><p>Thanks for reaching out, I'll reply to your email soon.</p></div>
+  <p class="muted center" style="margin-top:20px">Looking for something specific? <a href="faq.html">FAQ</a> · <a href="order.html">Check your order</a> · <a href="custom.html">Custom orders</a></p>
+</main>
+<footer id="site-footer"></footer>
+<script type="module">
+import { sb, getSettings, renderChrome, esc, safeUrl } from "./assets/common.js";
+const s = await getSettings();
+renderChrome(s, "contact");
+const q = [
+  safeUrl(s.instagram_url) && `<a class="btn secondary small" href="${esc(s.instagram_url)}" target="_blank" rel="noopener">DM me on Instagram</a>`,
+  safeUrl(s.tiktok_url) && `<a class="btn secondary small" href="${esc(s.tiktok_url)}" target="_blank" rel="noopener">TikTok</a>`,
+].filter(Boolean).join(" ");
+document.getElementById("quick").innerHTML = q ? `<p>${q}</p>` : "";
+document.getElementById("form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const f = Object.fromEntries(new FormData(e.target));
+  const btn = document.getElementById("submit"); btn.disabled = true;
+  const { error } = await sb.from("contact_messages").insert(f);
+  if (error) { document.getElementById("err").textContent = "Something went wrong — please try again or DM me on Instagram."; btn.disabled = false; return; }
+  e.target.style.display = "none"; document.getElementById("done").style.display = "";
+});
+</script>
+</body>
+</html>
