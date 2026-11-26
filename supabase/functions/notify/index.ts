@@ -45,10 +45,11 @@ Deno.serve(async (req) => {
       if (!o) return Response.json({ skipped: "already notified" });
       const items = o.order_items.map((i: any) => `<li>${i.quantity} × ${esc(i.name)} (${money(i.price_cents)})</li>`).join("");
       const pm = { zelle: "Zelle", venmo: "Venmo", pickup: "Pay at pickup" }[o.payment_method as string];
+      const disc = o.discount_cents ? `<p>Subtotal ${money(o.subtotal_cents)} · code <b>${esc(o.discount_code)}</b> −${money(o.discount_cents)}</p>` : "";
 
       await send(OWNER_EMAIL, `🧶 New order #${o.order_number} – ${money(o.total_cents)}`, wrap(s, `
         <p><b>${esc(o.customer_name)}</b> placed order <b>#${o.order_number}</b>.</p>
-        <ul>${items}</ul><p><b>Total: ${money(o.total_cents)}</b> · ${pm}</p>
+        <ul>${items}</ul>${disc}<p><b>Total: ${money(o.total_cents)}</b> · ${pm}</p>
         <p>Email: ${esc(o.email)}${o.phone ? `<br>Phone: ${esc(o.phone)}` : ""}</p>
         ${o.customer_notes ? `<p><i>Note:</i> ${esc(o.customer_notes)}</p>` : ""}`), o.email);
 
@@ -58,7 +59,7 @@ Deno.serve(async (req) => {
         if (o.payment_method === "venmo") pay = `Please send <b>${money(o.total_cents)}</b> via Venmo to <b>@${esc(String(s.venmo_handle).replace(/^@/, ""))}</b> with <b>Order #${o.order_number}</b> in the note.`;
         await send(o.email, `Your order #${o.order_number} from ${s.shop_name}`, wrap(s, `
           <p>Hi ${esc(o.customer_name)}, thank you for your order! 💕</p>
-          <ul>${items}</ul><p><b>Total: ${money(o.total_cents)}</b></p><p>${pay}</p>
+          <ul>${items}</ul>${disc}<p><b>Total: ${money(o.total_cents)}</b></p><p>${pay}</p>
           <p><b>Pickup:</b> ${esc(s.pickup_location)}</p>
           ${s.pickup_instructions ? `<p>${esc(s.pickup_instructions)}</p>` : ""}
           <p>I'll let you know when it's ready. Just reply to this email if you have questions!</p>`), OWNER_EMAIL);

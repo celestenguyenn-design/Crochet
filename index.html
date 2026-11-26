@@ -12,7 +12,7 @@
 <dialog id="lightbox" class="lightbox"></dialog>
 <footer id="site-footer"></footer>
 <script type="module">
-import { sb, getSettings, renderChrome, applyTheme, esc, cart, toast } from "./assets/common.js";
+import { sb, getSettings, renderChrome, applyTheme, esc, cart, toast, wireSignup } from "./assets/common.js";
 import { renderSections, newSection } from "./assets/sections.js";
 
 const preview = new URLSearchParams(location.search).has("preview");
@@ -44,6 +44,7 @@ function filterCat(id) {
   home.querySelectorAll("[data-cat-item]").forEach((el) => (el.style.display = !id || el.dataset.catItem === id ? "" : "none"));
 }
 render(s.home_sections);
+wireSignup(home);
 
 home.addEventListener("click", (e) => {
   const add = e.target.closest("[data-add]");

@@ -8,9 +8,10 @@
 </head>
 <body>
 <header id="site-header"></header>
-<main class="container"><article id="article" class="article"><p class="muted">Loading…</p></article></main>
+<main class="container"><article id="article" class="article" data-site=""><p class="muted">Loading…</p></article></main>
 <script type="module">
-import { sb, getSettings, renderChrome, esc, safeUrl } from "./assets/common.js";
+import { sb, getSettings, renderChrome, esc, safeUrl, wireSignup } from "./assets/common.js";
+import { signupForm } from "./assets/sections.js";
 import { marked, DOMPurify } from "./assets/vendor/markdown.js";
 const s = await getSettings();
 const slug = new URLSearchParams(location.search).get("p");
@@ -32,12 +33,25 @@ else {
     ${p.published_at ? `<p class="muted">${new Date(p.published_at).toLocaleDateString(undefined, { dateStyle: "long" })}</p>` : ""}
     ${safeUrl(p.cover_image_url) ? `<img class="cover" src="${esc(p.cover_image_url)}" alt="${esc(p.title)}">` : ""}
     ${p.summary ? `<p><i>${esc(p.summary)}</i></p>` : ""}
+    <div class="pattern-actions no-print">
+      <a class="btn small pin-btn" target="_blank" rel="noopener" href="https://www.pinterest.com/pin/create/button/?url=${encodeURIComponent(location.href)}${safeUrl(p.cover_image_url) ? `&media=${encodeURIComponent(p.cover_image_url)}` : ""}&description=${encodeURIComponent(p.title + " – free crochet pattern")}">📌 Save to Pinterest</a>
+      <button class="btn small secondary" id="print-btn">🖨️ Print / Save as PDF</button>
+      <button class="btn small secondary" id="share-btn">🔗 Share</button>
+    </div>
     <div class="ad-slot"></div>
     ${p.materials ? `<div class="materials"><b>Materials</b>\n${esc(p.materials)}</div>` : ""}
     <div class="content">${body}</div>
     <div class="ad-slot"></div>
-    <div class="notice center"><p>Don't want to make it yourself?</p><a class="btn" href="custom.html">Request a custom piece</a> <a class="btn secondary" href="index.html">Visit the shop</a></div>`;
+    <div class="card signup center no-print"><h2>Want more free patterns?</h2><p>Get an email when I post a new one.</p>${signupForm("Sign me up", "pattern")}</div>
+    <div class="notice center no-print" style="margin-top:20px"><p>Don't want to make it yourself?</p><a class="btn" href="custom.html">Request a custom piece</a> <a class="btn secondary" href="index.html">Visit the shop</a></div>`;
+  el.dataset.site = `${s.shop_name} — ${location.href}`;
   renderChrome(s, "patterns");
+  wireSignup(el);
+  document.getElementById("print-btn").onclick = () => window.print();
+  document.getElementById("share-btn").onclick = async () => {
+    if (navigator.share) { try { await navigator.share({ title: p.title, url: location.href }); } catch {} }
+    else { await navigator.clipboard.writeText(location.href); const { toast } = await import("./assets/common.js"); toast("Link copied!"); }
+  };
 }
 </script>
 <footer id="site-footer"></footer>

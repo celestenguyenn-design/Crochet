@@ -40,6 +40,7 @@ else {
         <button class="btn" id="add" ${soldOut ? "disabled" : ""}>${soldOut ? "Sold out" : "Add to cart"}</button>
       </div>
       <p class="error" id="err"></p>
+      <a class="bigger-link" href="custom.html?item=${encodeURIComponent(p.name)}">📏 Want it bigger or in different colors? Request a custom version →</a>
       <div class="desc-full">${md(p.description)}</div>
     </div>
   </div>`;

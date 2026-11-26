@@ -262,3 +262,38 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--p
   nav .cart-link { position: absolute; right: 20px; top: 12px; background: color-mix(in srgb, var(--accent) 35%, transparent); }
   nav .cart-link.active { background: var(--primary); }
 }
+
+/* ===== Product page: custom version link ===== */
+.bigger-link { display: block; margin-top: 10px; font-weight: 600; text-decoration: none; background: color-mix(in srgb, var(--accent) 25%, transparent);
+  padding: 10px 14px; border-radius: 16px; font-size: .95rem; }
+
+/* ===== Email sign-up ===== */
+.signup-form { display: flex; gap: 8px; max-width: 460px; margin: 14px auto 0; }
+.signup-form input { flex: 1; }
+.signup-done { font-weight: 700; color: var(--primary); }
+@media (max-width: 640px) { .signup-form { flex-direction: column; } }
+
+/* ===== Pattern actions ===== */
+.pattern-actions { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0 18px; }
+.pin-btn { background: #e60023; box-shadow: 0 4px 0 #a5001a; }
+
+/* ===== Order status ===== */
+.steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 16px 0; }
+.step { text-align: center; font-size: .85rem; font-weight: 600; color: var(--muted); padding: 10px 4px; border-radius: 16px; background: color-mix(in srgb, var(--line) 60%, transparent); }
+.step span { display: block; font-size: 1.4rem; filter: grayscale(1); opacity: .5; }
+.step.done { background: color-mix(in srgb, var(--accent) 45%, var(--card)); color: var(--text); }
+.step.done span { filter: none; opacity: 1; }
+.step.current { outline: 2px solid var(--primary); }
+
+/* ===== Printing patterns ===== */
+@media print {
+  #site-header, #site-footer, .ad-slot, .no-print, .toast, .pattern-actions, a[href="patterns.html"] { display: none !important; }
+  body { background: #fff !important; color: #000; font-size: 11pt; }
+  .card, .materials { box-shadow: none !important; border: 1px solid #ccc !important; }
+  .article { max-width: none; }
+  .article .cover { max-height: 3.5in; width: auto; margin: 0 auto 12px; }
+  .content img { max-height: 3in; width: auto; break-inside: avoid; }
+  h2 { break-after: avoid; }
+  main { padding: 0; }
+  .article::after { content: "Free pattern from " attr(data-site); display: block; margin-top: 24px; font-size: 9pt; color: #666; }
+}

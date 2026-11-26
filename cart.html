@@ -21,6 +21,9 @@
         <label>Phone (for pickup coordination)</label><input name="phone" type="tel" maxlength="50">
         <label>How would you like to pay?</label>
         <div id="pay-options"></div>
+        <label>Discount code</label>
+        <div class="inline" style="margin-top:0"><div><input id="code" placeholder="e.g. MARKET10" autocapitalize="characters" maxlength="30"></div><button type="button" class="btn small secondary" id="apply-code">Apply</button></div>
+        <p class="muted" id="code-msg" style="margin:4px 0 0"></p>
         <label>Notes (pickup time preferences, etc.)</label><textarea name="notes" maxlength="2000"></textarea>
         <p class="error" id="err"></p>
         <button class="btn" id="submit" style="width:100%">Place pickup order</button>
@@ -43,6 +46,18 @@ document.getElementById("pay-options").innerHTML = opts.length
   ? opts.map(([v, l, d], i) => `<label class="pay-option"><input type="radio" name="pay" value="${v}" ${i === 0 ? "checked" : ""} required><span><b>${l}</b><br><span class="muted">${d}</span></span></label>`).join("")
   : `<p class="error">Payment options haven't been set up yet.</p>`;
 
+let discount = null; // { code, percent_off, amount_off_cents, min_subtotal_cents }
+const discountFor = (sub) => !discount || sub < discount.min_subtotal_cents ? 0
+  : Math.min(sub, discount.percent_off ? Math.round(sub * discount.percent_off / 100) : discount.amount_off_cents);
+document.getElementById("apply-code").onclick = async () => {
+  const code = document.getElementById("code").value.trim().toUpperCase(), msg = document.getElementById("code-msg");
+  if (!code) { discount = null; msg.textContent = ""; return render(); }
+  const { data } = await sb.rpc("check_discount", { p_code: code });
+  if (!data) { discount = null; msg.innerHTML = `<span class="error">That code isn't valid.</span>`; return render(); }
+  discount = data;
+  msg.textContent = `✓ ${data.code}: ${data.percent_off ? data.percent_off + "% off" : money(data.amount_off_cents) + " off"}${data.min_subtotal_cents ? ` orders of ${money(data.min_subtotal_cents)}+` : ""}`;
+  render();
+};
 function render() {
   const items = cart.get();
   const box = document.getElementById("items");
@@ -57,8 +72,11 @@ function render() {
     <div><b>${esc(i.name)}</b><br><span class="muted">${money(i.price_cents)} each</span></div>
     <input class="qty" type="number" min="1" max="100" value="${i.quantity}" data-idx="${idx}">
     <button class="btn small secondary" data-remove="${idx}" type="button">Remove</button></div>`).join("");
-  const total = items.reduce((t, i) => t + i.price_cents * i.quantity, 0);
-  document.getElementById("total").textContent = `Total: ${money(total)} (no tax)`;
+  const sub = items.reduce((t, i) => t + i.price_cents * i.quantity, 0), off = discountFor(sub);
+  document.getElementById("total").innerHTML = off
+    ? `<span class="muted" style="font-size:1rem">Subtotal ${money(sub)} · ${esc(discount.code)} −${money(off)}</span><br>Total: ${money(sub - off)} (no tax)`
+    : `Total: ${money(sub)} (no tax)`;
+  if (discount && !off && discount.min_subtotal_cents) document.getElementById("code-msg").textContent = `Add ${money(discount.min_subtotal_cents - sub)} more to use ${discount.code}.`;
 }
 render();
 document.getElementById("items").addEventListener("change", (e) => {
@@ -79,6 +97,7 @@ document.getElementById("form").addEventListener("submit", async (e) => {
     p_name: f.get("name"), p_email: f.get("email"), p_phone: f.get("phone"),
     p_payment_method: f.get("pay"), p_notes: f.get("notes"),
     p_items: cart.get().map((i) => ({ product_id: i.product_id, quantity: i.quantity, options: i.options || {} })),
+    p_discount_code: discount?.code || null,
   });
   if (error) { err.textContent = error.message; btn.disabled = false; return; }
   cart.clear();
@@ -95,7 +114,8 @@ document.getElementById("form").addEventListener("submit", async (e) => {
   done.style.display = "";
   done.innerHTML = `<h1>Thank you! 🧶</h1><div class="notice"><h2>Order #${n}</h2>${payMsg}
     <p><b>Pickup:</b> ${esc(s.pickup_location)}</p>${s.pickup_instructions ? `<p style="white-space:pre-wrap">${esc(s.pickup_instructions)}</p>` : ""}
-    <p class="muted">Save your order number. I'll reach out when your order is ready for pickup.</p></div>`;
+    ${data.discount_cents ? `<p>You saved ${money(data.discount_cents)}! 🎉</p>` : ""}
+    <p class="muted">Save your order number. I'll reach out when your order is ready for pickup — or <a href="order.html?n=${n}">check your order status</a> anytime.</p></div>`;
 });
 </script>
 <footer id="site-footer"></footer>

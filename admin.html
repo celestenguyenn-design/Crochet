@@ -80,6 +80,7 @@
       <button data-tab="patterns">Patterns</button>
       <button data-tab="reviews">Reviews &amp; FAQ</button>
       <button data-tab="pages">Pages</button>
+      <button data-tab="marketing">Marketing</button>
       <button data-tab="appearance">Appearance</button>
       <button data-tab="settings">Payment &amp; Pickup</button>
     </div>
@@ -90,6 +91,7 @@
     <section id="tab-gallery" hidden></section>
     <section id="tab-reviews" hidden></section>
     <section id="tab-pages" hidden></section>
+    <section id="tab-marketing" hidden></section>
     <section id="tab-patterns" hidden></section>
     <section id="tab-appearance" hidden></section>
     <section id="tab-settings" hidden></section>
@@ -127,7 +129,7 @@ $("login").addEventListener("submit", async (e) => {
 $("logout").addEventListener("click", async (e) => { e.preventDefault(); await sb.auth.signOut(); boot(); });
 
 // ---------- Tabs ----------
-const loaders = { orders: loadOrders, requests: loadRequests, products: loadProducts, homepage: loadHomepage, gallery: loadGallery, reviews: loadReviews, pages: loadPages, patterns: loadPatterns, appearance: loadAppearance, settings: loadSettings };
+const loaders = { orders: loadOrders, requests: loadRequests, products: loadProducts, homepage: loadHomepage, gallery: loadGallery, reviews: loadReviews, pages: loadPages, marketing: loadMarketing, patterns: loadPatterns, appearance: loadAppearance, settings: loadSettings };
 function showTab(name) {
   document.querySelectorAll("#tabs button").forEach((b) => b.classList.toggle("active", b.dataset.tab === name));
   document.querySelectorAll("#app > section").forEach((s) => (s.hidden = s.id !== "tab-" + name));
@@ -195,6 +197,7 @@ function orderCard(o) {
       <span><span class="pill ${o.payment_status}">${label(o.payment_status)}</span> <span class="pill">${label(o.status)}</span></span></div>
     <div class="muted">${fmtDate(o.created_at)} · ${esc(o.email)} ${o.phone ? "· " + esc(o.phone) : ""} · ${pm}</div>
     <ul>${o.order_items.map((i) => `<li>${i.quantity} × ${esc(i.name)} (${money(i.price_cents)})</li>`).join("")}</ul>
+    ${o.discount_cents ? `<div class="muted">Subtotal ${money(o.subtotal_cents)} · code <b>${esc(o.discount_code)}</b> −${money(o.discount_cents)}</div>` : ""}
     <b>Total: ${money(o.total_cents)}</b>
     ${o.customer_notes ? `<p><i>Customer note:</i> ${esc(o.customer_notes)}</p>` : ""}
     <div class="inline">
@@ -540,6 +543,56 @@ function pageDialog(pg) {
   };
 }
 
+// ---------- Marketing: discount codes + email list ----------
+async function loadMarketing() {
+  const el = $("tab-marketing");
+  const [{ data: codes }, { data: subs }] = await Promise.all([
+    sb.from("discount_codes").select("*").order("created_at", { ascending: false }),
+    sb.from("subscribers").select("*").order("created_at", { ascending: false }),
+  ]);
+  const desc = (c) => (c.percent_off ? `${c.percent_off}% off` : `${money(c.amount_off_cents)} off`) + (c.min_subtotal_cents ? ` orders ${money(c.min_subtotal_cents)}+` : "");
+  const state = (c) => !c.active ? "Off" : c.expires_at && new Date(c.expires_at) < new Date() ? "Expired" : c.max_uses && c.uses >= c.max_uses ? "Used up" : "Active";
+  el.innerHTML = `<div class="card" style="margin-bottom:22px"><h2>🏷️ Discount codes</h2>
+    <p class="muted">Customers type these at checkout. Tip: share a code on Instagram or on a sign at your market table.</p>
+    <form id="code-form" class="card" style="box-shadow:none; border:1px dashed var(--line)">
+      <div class="row"><div><label>Code</label><input name="code" required placeholder="MARKET10" maxlength="30" style="text-transform:uppercase"></div>
+        <div><label>Discount</label><div class="inline" style="margin:0"><div><input name="amount" type="number" min="1" step="0.01" required placeholder="10"></div>
+          <div style="max-width:120px"><select name="kind"><option value="percent">% off</option><option value="amount">$ off</option></select></div></div></div></div>
+      <div class="row"><div><label>Minimum order ($, optional)</label><input name="min" type="number" min="0" step="0.01"></div>
+        <div><label>Max uses (optional)</label><input name="max" type="number" min="1"></div></div>
+      <label>Ends on (optional)</label><input name="expires" type="date">
+      <button class="btn" style="margin-top:14px">+ Create code</button></form>
+    <div class="list" style="margin-top:14px">${(codes || []).map((c) => `<div class="card head" style="align-items:center; box-shadow:none; border:1px solid var(--line)">
+      <div><b style="font-family:monospace; font-size:1.1rem">${esc(c.code)}</b> <span class="pill ${state(c) === "Active" ? "paid" : ""}">${state(c)}</span><br>
+        <span class="muted">${desc(c)} · used ${c.uses}${c.max_uses ? "/" + c.max_uses : ""} times${c.expires_at ? " · ends " + new Date(c.expires_at).toLocaleDateString() : ""}</span></div>
+      <span><button class="btn small secondary" data-toggle="${c.id}" data-on="${c.active}">${c.active ? "Turn off" : "Turn on"}</button> <button class="btn small danger" data-delcode="${c.id}">Delete</button></span></div>`).join("") || `<p class="muted">No codes yet.</p>`}</div></div>
+  <div class="card"><div class="head"><h2>💌 Email list <span class="muted" style="font-size:1rem">(${subs?.length || 0})</span></h2>
+    <span><button class="btn small" id="copy-emails" ${subs?.length ? "" : "disabled"}>Copy all emails</button> <button class="btn small secondary" id="csv" ${subs?.length ? "" : "disabled"}>Download CSV</button></span></div>
+    <p class="muted">People who signed up on your site. To email them: tap <b>Copy all emails</b>, start a new email in Gmail, and paste into the <b>BCC</b> line (so nobody sees each other's address). Remove anyone who asks to unsubscribe.</p>
+    <p class="muted">Add a sign-up box to your homepage with the <b>Email sign-up</b> section. Every pattern page already has one.</p>
+    <div class="list">${(subs || []).map((x) => `<div class="inline" style="align-items:center; margin-top:6px"><div>${esc(x.email)} <span class="muted" style="font-size:.85rem">· ${new Date(x.created_at).toLocaleDateString()}${x.source ? " · from " + esc(x.source) : ""}</span></div>
+      <button class="btn small danger" data-delsub="${x.id}">Remove</button></div>`).join("") || `<p class="muted">No sign-ups yet.</p>`}</div></div>`;
+
+  $("code-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const f = new FormData(e.target), amt = parseFloat(f.get("amount"));
+    const row = { code: f.get("code").trim().toUpperCase().replace(/\s+/g, ""), min_subtotal_cents: f.get("min") ? toCents(f.get("min")) : 0,
+      max_uses: f.get("max") ? parseInt(f.get("max")) : null, expires_at: f.get("expires") ? new Date(f.get("expires") + "T23:59:59").toISOString() : null };
+    if (f.get("kind") === "percent") { if (amt > 100) return toast("Percent can't be over 100"); row.percent_off = Math.round(amt); } else row.amount_off_cents = toCents(amt);
+    const { error } = await sb.from("discount_codes").insert(row);
+    toast(error ? (error.code === "23505" ? "That code already exists" : error.code === "23514" ? "Codes can only use letters, numbers, - and _" : error.message) : "Code created!");
+    if (!error) loadMarketing();
+  });
+  el.querySelectorAll("[data-toggle]").forEach((b) => b.onclick = async () => { await sb.from("discount_codes").update({ active: b.dataset.on !== "true" }).eq("id", b.dataset.toggle); loadMarketing(); });
+  el.querySelectorAll("[data-delcode]").forEach((b) => b.onclick = async () => { if (confirm("Delete this code?")) { await sb.from("discount_codes").delete().eq("id", b.dataset.delcode); loadMarketing(); } });
+  el.querySelectorAll("[data-delsub]").forEach((b) => b.onclick = async () => { if (confirm("Remove this email from your list?")) { await sb.from("subscribers").delete().eq("id", b.dataset.delsub); loadMarketing(); } });
+  $("copy-emails").onclick = async () => { await navigator.clipboard.writeText(subs.map((x) => x.email).join(", ")); toast(`Copied ${subs.length} emails`); };
+  $("csv").onclick = () => {
+    const csv = "email,signed_up,source\n" + subs.map((x) => `${x.email},${x.created_at.slice(0, 10)},${x.source || ""}`).join("\n");
+    const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" })); a.download = "email-list.csv"; a.click();
+  };
+}
+
 // ---------- Gallery ----------
 async function loadGallery() {
   const el = $("tab-gallery");
@@ -656,6 +709,9 @@ function loadAppearance() {
     <p class="muted">Banner, sections, and About text are now in the <b>Homepage</b> tab.</p>
     <div class="row"><div><label>Instagram link</label><input name="instagram_url" value="${esc(s.instagram_url)}" placeholder="https://instagram.com/…"></div>
       <div><label>TikTok link</label><input name="tiktok_url" value="${esc(s.tiktok_url)}" placeholder="https://tiktok.com/@…"></div></div>
+    <h2 style="margin-top:28px">Visitor stats</h2>
+    <label>GoatCounter code</label><input name="goatcounter_code" value="${esc(s.goatcounter_code)}" placeholder="e.g. hookedbyceleste">
+    <p class="muted" style="font-size:.9rem">Free, no cookies. Sign up at goatcounter.com, pick a code (it becomes <i>yourcode</i>.goatcounter.com), and type just the code here. Your stats are then at that address.</p>
     <h2 style="margin-top:28px">Ads</h2>
     <label>Google AdSense publisher ID</label><input name="adsense_client" value="${esc(s.adsense_client)}" placeholder="ca-pub-1234567890123456">
     <p class="muted" style="font-size:.9rem">Once AdSense approves your site, paste your ID here. Ads then appear on your Free Patterns pages automatically. Leave it blank for no ads.</p>
@@ -679,6 +735,8 @@ function loadAppearance() {
     f.corner_radius = parseInt(f.corner_radius);
     f.adsense_client = f.adsense_client.trim();
     if (f.adsense_client && !/^ca-pub-\d+$/.test(f.adsense_client)) return toast("AdSense ID should look like ca-pub-1234567890");
+    f.goatcounter_code = (f.goatcounter_code || "").trim().toLowerCase().replace(/^https?:\/\//, "").replace(/\.goatcounter\.com.*$/, "");
+    if (f.goatcounter_code && !/^[a-z0-9-]+$/.test(f.goatcounter_code)) return toast("GoatCounter code can only have letters, numbers and dashes");
     await saveSettings(f);
   });
 }

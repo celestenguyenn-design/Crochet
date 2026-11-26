@@ -92,6 +92,14 @@ export const SECTION_TYPES = {
       { key: "body", label: "Text", type: "textarea", default: "Follow along for new makes, market dates, and behind-the-scenes." },
     ],
   },
+  signup: {
+    label: "Email sign-up", icon: "💌", desc: "Collect emails for new patterns, restocks & market dates",
+    fields: [
+      { key: "title", label: "Title", type: "text", default: "Join the list!" },
+      { key: "body", label: "Text", type: "textarea", default: "Get an email when I post new patterns, restock, or have a market coming up." },
+      { key: "button", label: "Button text", type: "text", default: "Sign me up" },
+    ],
+  },
   spacer: {
     label: "Divider", icon: "〰️", desc: "A cute wavy line between sections",
     fields: [],
@@ -195,11 +203,18 @@ export const RENDER = {
       ${tt ? `<a class="btn secondary" href="${esc(tt)}" target="_blank" rel="noopener">TikTok</a>` : ""}
       ${!ig && !tt && d.preview ? `<p class="muted">(Add your links in Appearance.)</p>` : ""}</div></section>`;
   },
+  signup(s) {
+    return `<section class="card signup center"><h2>${esc(s.title)}</h2>${s.body ? `<p>${esc(s.body)}</p>` : ""}${signupForm(s.button, "homepage")}</section>`;
+  },
   spacer() {
     return `<div class="squiggle" aria-hidden="true"><svg viewBox="0 0 300 20"><path d="M0,10 Q15,0 30,10 T60,10 T90,10 T120,10 T150,10 T180,10 T210,10 T240,10 T270,10 T300,10" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg></div>`;
   },
 };
 
+export function signupForm(button = "Sign me up", source = "") {
+  return `<form class="signup-form" data-source="${esc(source)}"><input type="email" required placeholder="you@email.com" aria-label="Email">
+    <button class="btn">${esc(button || "Sign me up")}</button></form>`;
+}
 export function faqList(list) {
   return `<div class="faq">${list.map((f) => `<details class="card"><summary>${esc(f.question)}</summary><div>${md(f.answer)}</div></details>`).join("")}</div>`;
 }

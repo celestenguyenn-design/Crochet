@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Order status</title>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<header id="site-header"></header>
+<main class="container article">
+  <h1>Check your order</h1>
+  <p class="muted">Enter your order number and the email you ordered with.</p>
+  <form id="form" class="card">
+    <div class="row">
+      <div><label>Order number</label><input name="n" type="number" min="1" required placeholder="e.g. 1001"></div>
+      <div><label>Email</label><input name="email" type="email" required></div>
+    </div>
+    <button class="btn" style="margin-top:16px">Look up order</button>
+    <p class="error" id="err"></p>
+  </form>
+  <div id="result" style="margin-top:22px"></div>
+</main>
+<footer id="site-footer"></footer>
+<script type="module">
+import { sb, getSettings, renderChrome, esc, money } from "./assets/common.js";
+const s = await getSettings();
+renderChrome(s, "");
+const STEPS = [["new", "Received", "📝"], ["in_progress", "Being made", "🧶"], ["ready", "Ready for pickup", "🎀"], ["picked_up", "Picked up", "💖"]];
+const n = new URLSearchParams(location.search).get("n");
+if (n) document.querySelector("[name=n]").value = n;
+document.getElementById("form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const f = new FormData(e.target), err = document.getElementById("err"), out = document.getElementById("result");
+  err.textContent = ""; out.innerHTML = "";
+  const { data: o, error } = await sb.rpc("lookup_order", { p_order_number: parseInt(f.get("n")), p_email: f.get("email") });
+  if (error || !o) { err.textContent = "We couldn't find that order. Double-check the number and email."; return; }
+  const idx = STEPS.findIndex(([k]) => k === o.status);
+  const steps = o.status === "cancelled" ? `<p class="notice"><b>This order was cancelled.</b> Message me if that's a surprise!</p>`
+    : `<div class="steps">${STEPS.map(([k, l, ic], i) => `<div class="step ${i <= idx ? "done" : ""} ${i === idx ? "current" : ""}"><span>${ic}</span>${l}</div>`).join("")}</div>`;
+  const paid = o.payment_status === "paid" ? "✅ Paid" : o.payment_status === "refunded" ? "Refunded"
+    : o.payment_method === "pickup" ? "You'll pay at pickup" : `⏳ Waiting for your ${o.payment_method === "zelle" ? "Zelle" : "Venmo"} payment`;
+  out.innerHTML = `<div class="card"><h2>Order #${o.order_number}</h2>${steps}
+    <ul>${o.items.map((i) => `<li>${i.quantity} × ${esc(i.name)}</li>`).join("")}</ul>
+    <p><b>Total: ${money(o.total_cents)}</b> · ${paid}</p>
+    ${o.status === "ready" ? `<p class="notice"><b>Pickup:</b> ${esc(s.pickup_location)}${s.pickup_instructions ? `<br>${esc(s.pickup_instructions)}` : ""}</p>` : ""}
+    <p class="muted">Ordered ${new Date(o.created_at).toLocaleDateString(undefined, { dateStyle: "medium" })}</p></div>`;
+});
+</script>
+</body>
+</html>

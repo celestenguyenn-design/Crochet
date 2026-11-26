@@ -34,6 +34,12 @@
 <script type="module">
 import { sb, getSettings, renderChrome } from "./assets/common.js";
 renderChrome(await getSettings(), "custom");
+const item = new URLSearchParams(location.search).get("item");
+if (item) {
+  const d = document.querySelector("[name=description]");
+  d.value = `I'd like a custom version of "${item.slice(0, 120)}":\n- Size: \n- Anything else: `;
+  document.querySelector("[name=size]").placeholder = "e.g. twice as big";
+}
 document.getElementById("form").addEventListener("submit", async (e) => {
   e.preventDefault();
   const f = Object.fromEntries(new FormData(e.target));

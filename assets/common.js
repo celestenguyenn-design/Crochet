@@ -80,7 +80,7 @@ export function renderChrome(s, active, pages = null) {
   ].filter(Boolean).join(" · ");
   const footer = document.getElementById("site-footer");
   const paint = (pg) => {
-    const links = [`<a href="faq.html">FAQ</a>`, ...(pg || []).map((p) => `<a href="page.html?p=${encodeURIComponent(p.slug)}">${esc(p.title)}</a>`)].join(" · ");
+    const links = [`<a href="order.html">Order status</a>`, `<a href="faq.html">FAQ</a>`, ...(pg || []).map((p) => `<a href="page.html?p=${encodeURIComponent(p.slug)}">${esc(p.title)}</a>`)].join(" · ");
     footer.innerHTML = `<div class="container footer-inner">
       <div>© ${new Date().getFullYear()} ${esc(s.shop_name)}</div>
       <div class="footer-links">${links}</div>
@@ -92,6 +92,31 @@ export function renderChrome(s, active, pages = null) {
   document.title = base ? `${base} · ${s.shop_name}` : s.shop_name;
   updateCartCount();
   setupAds(s);
+  setupStats(s);
+}
+
+// ---------- Visitor stats (GoatCounter, no cookies) ----------
+function setupStats(s) {
+  const code = (s.goatcounter_code || "").trim();
+  if (!/^[a-z0-9-]+$/.test(code) || document.getElementById("gc-script") || location.pathname.endsWith("admin.html") || location.search.includes("preview")) return;
+  const sc = document.createElement("script");
+  sc.id = "gc-script"; sc.async = true; sc.src = "https://gc.zgo.at/count.js";
+  sc.dataset.goatcounter = `https://${code}.goatcounter.com/count`;
+  document.body.appendChild(sc);
+}
+
+// ---------- Email sign-up forms ----------
+// Any <form class="signup-form" data-source="..."> with an email input becomes a working sign-up.
+export function wireSignup(root = document) {
+  root.addEventListener("submit", async (e) => {
+    const form = e.target.closest(".signup-form"); if (!form) return;
+    e.preventDefault();
+    const email = form.querySelector("input[type=email]").value.trim();
+    const btn = form.querySelector("button"); btn.disabled = true;
+    const { error } = await sb.from("subscribers").insert({ email, source: form.dataset.source || "" });
+    if (error && error.code !== "23505") { toast("Hmm, that didn't work. Check your email address."); btn.disabled = false; return; }
+    form.innerHTML = `<p class="signup-done">You're on the list! 💌</p>`;
+  });
 }
 
 // ---------- Ads (Google AdSense) ----------
