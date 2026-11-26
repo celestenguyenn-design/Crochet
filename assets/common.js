@@ -14,7 +14,8 @@ export const FONTS = {
 export const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) =>
   ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 export const money = (cents) => "$" + (cents / 100).toFixed(2);
-export const safeUrl = (u) => /^https?:\/\//i.test(u || "") ? u : "";
+// Allows full web links, or photos stored with the site itself (assets/photos/...)
+export const safeUrl = (u) => /^https?:\/\//i.test(u || "") || /^assets\/[\w\/.-]+$/.test(u || "") ? u : "";
 
 // ---------- Theme ----------
 const loadedFonts = new Set();
@@ -57,9 +58,7 @@ export async function getSettings() {
 
 // ---------- Layout ----------
 export function renderChrome(s, active, pages = null) {
-  const logo = safeUrl(s.logo_url)
-    ? `<img src="${esc(s.logo_url)}" alt="${esc(s.shop_name)}" class="logo-img">`
-    : `<span class="logo-text">${esc(s.shop_name)}</span>`;
+  const logo = (safeUrl(s.logo_url) ? `<img src="${esc(s.logo_url)}" alt="" class="logo-img">` : "") + `<span class="logo-text">${esc(s.shop_name)}</span>`;
   const link = (href, label, key) => `<a href="${href}" class="${active === key ? "active" : ""}">${label}</a>`;
   const annLink = /^(https?:\/\/|#|[a-z0-9_-]+\.html)/i.test(s.announcement_link || "") ? s.announcement_link : "";
   const ann = s.announcement_enabled && s.announcement_text

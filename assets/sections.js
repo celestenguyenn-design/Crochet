@@ -21,6 +21,17 @@ export const SECTION_TYPES = {
       { key: "button2_link", label: "Button 2 link", type: "text", default: "custom.html" },
     ],
   },
+  image_banner: {
+    label: "Picture banner", icon: "🎨", desc: "A full-width illustration or photo (no text on top), with optional buttons",
+    fields: [
+      { key: "image", label: "Banner picture", type: "image", default: "" },
+      { key: "alt", label: "Describe the picture (for screen readers & Google)", type: "text", default: "Hooked By Celeste – handmade crochet plushies" },
+      { key: "button1_label", label: "Button 1 text (optional)", type: "text", default: "Shop now" },
+      { key: "button1_link", label: "Button 1 link", type: "text", default: "#shop" },
+      { key: "button2_label", label: "Button 2 text (optional)", type: "text", default: "Request a custom piece" },
+      { key: "button2_link", label: "Button 2 link", type: "text", default: "custom.html" },
+    ],
+  },
   products: {
     label: "Featured products", icon: "⭐", desc: "A row of best sellers, a category, or newest items",
     fields: [
@@ -139,6 +150,13 @@ export const RENDER = {
       <div class="hero-btns">${btn(s.button1_label, s.button1_link, "")} ${btn(s.button2_label, s.button2_link, "secondary")}</div>
       <svg class="wave" viewBox="0 0 1200 40" preserveAspectRatio="none" aria-hidden="true"><path fill="currentColor" d="M0,20 C150,45 300,0 450,20 C600,40 750,0 900,20 C1050,40 1150,10 1200,20 L1200,40 L0,40 Z"/></svg>
     </section>`;
+  },
+  image_banner(s, d) {
+    const img = safeUrl(s.image);
+    if (!img) return d.preview ? `<section class="banner-img ph" style="aspect-ratio:4/1; display:grid; place-items:center"><p class="muted">(Upload your banner picture)</p></section>` : "";
+    const btn = (l, h, cls) => (l && linkOk(h) ? `<a class="btn ${cls}" href="${esc(h)}">${esc(l)}</a>` : "");
+    const btns = btn(s.button1_label, s.button1_link, "") + " " + btn(s.button2_label, s.button2_link, "secondary");
+    return `<section><img class="banner-img" src="${esc(img)}" alt="${esc(s.alt)}">${btns.trim() ? `<div class="hero-btns banner-btns">${btns}</div>` : ""}</section>`;
   },
   products(s, d) {
     let list = d.products;
