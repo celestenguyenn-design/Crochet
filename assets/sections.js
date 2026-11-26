@@ -75,6 +75,15 @@ export const SECTION_TYPES = {
       { key: "align", label: "Alignment", type: "select", default: "left", options: [["left", "Left"], ["center", "Center"]] },
     ],
   },
+  videos: {
+    label: "Videos", icon: "🎬", desc: "Show 1–2 videos — paste an Instagram reel or TikTok link, or upload a video",
+    fields: [
+      { key: "title", label: "Title", type: "text", default: "How I make them" },
+      { key: "body", label: "Text (optional)", type: "textarea", default: "" },
+      { key: "video1", label: "Video 1 (Instagram reel / TikTok link, or upload)", type: "video", default: "" },
+      { key: "video2", label: "Video 2 (optional)", type: "video", default: "" },
+    ],
+  },
   testimonials: {
     label: "Reviews", icon: "💬", desc: "Customer reviews you've added",
     fields: [
@@ -123,10 +132,28 @@ export function newSection(type) {
   return { id: "s" + Math.random().toString(36).slice(2, 9), type, enabled: true, settings };
 }
 
+// ---------- Videos: Instagram reels, TikToks, YouTube Shorts, or uploaded files ----------
+export function videoEmbed(url) {
+  const u = String(url || "").trim();
+  let m;
+  if ((m = u.match(/instagram\.com\/(?:[\w.]+\/)?(reel|reels|p|tv)\/([\w-]+)/i)))
+    return `<div class="vid vid-ig"><iframe src="https://www.instagram.com/${m[1] === "reels" ? "reel" : m[1]}/${m[2]}/embed" loading="lazy" allowfullscreen scrolling="no" title="Instagram video"></iframe></div>`;
+  if ((m = u.match(/tiktok\.com\/.*video\/(\d+)/i)))
+    return `<div class="vid vid-tt"><iframe src="https://www.tiktok.com/embed/v2/${m[1]}" loading="lazy" allowfullscreen title="TikTok video"></iframe></div>`;
+  if ((m = u.match(/(?:youtube\.com\/(?:shorts\/|watch\?v=)|youtu\.be\/)([\w-]{6,})/i)))
+    return `<div class="vid vid-yt"><iframe src="https://www.youtube-nocookie.com/embed/${m[1]}" loading="lazy" allowfullscreen title="YouTube video"></iframe></div>`;
+  if (safeUrl(u)) return `<div class="vid vid-file"><video src="${esc(u)}" controls playsinline preload="metadata"></video></div>`;
+  return "";
+}
+
 // ---------- Shared bits ----------
 export function productCard(p) {
   const soldOut = p.stock === 0;
-  const img = safeUrl(p.image_url) ? `<img class="img" src="${esc(p.image_url)}" alt="${esc(p.name)}" loading="lazy">` : `<div class="img"></div>`;
+  const photos = [p.image_url, ...(p.images || [])].filter(safeUrl);
+  const img = photos.length > 1
+    ? `<div class="pimgs" aria-label="${photos.length} photos">${photos.map((u, i) => `<img class="img" src="${esc(u)}" alt="${esc(p.name)}${i ? ` photo ${i + 1}` : ""}" loading="lazy">`).join("")}</div>
+       <div class="pdots">${photos.map((_, i) => `<span class="${i ? "" : "on"}"></span>`).join("")}</div>`
+    : photos.length ? `<img class="img" src="${esc(photos[0])}" alt="${esc(p.name)}" loading="lazy">` : `<div class="img"></div>`;
   const hasOptions = (p.options || []).some((o) => o.values?.length);
   const from = hasOptions && p.options.some((o) => o.values.some((v) => v.price_delta_cents)) ? "From " : "";
   return `<div class="product">${p.featured ? `<span class="ribbon">★ Best seller</span>` : ""}
@@ -175,7 +202,7 @@ export const RENDER = {
   },
   categories(s, d) {
     if (!d.categories.length) return d.preview ? `<section>${head(s.title)}<p class="muted">(Add categories in Products → Categories.)</p></section>` : "";
-    return `<section>${head(s.title)}<div class="cat-grid">${d.categories.map((c) => `<a class="cat-tile" href="index.html?cat=${c.id}#shop">
+    return `<section>${head(s.title)}<div class="cat-grid">${d.categories.map((c) => `<a class="cat-tile" href="${c.slug ? `category.html?c=${encodeURIComponent(c.slug)}` : `index.html?cat=${c.id}#shop`}">
       ${safeUrl(c.image_url) ? `<img src="${esc(c.image_url)}" alt="" loading="lazy">` : `<div class="ph"></div>`}<span>${esc(c.name)}</span></a>`).join("")}</div></section>`;
   },
   gallery(s, d) {
@@ -194,6 +221,12 @@ export const RENDER = {
   text(s) {
     if (!s.title && !s.body) return "";
     return `<section class="card text-block" style="text-align:${s.align === "center" ? "center" : "left"}">${s.title ? `<h2>${esc(s.title)}</h2>` : ""}<div>${md(s.body)}</div></section>`;
+  },
+  videos(s, d) {
+    const vids = [s.video1, s.video2].map(videoEmbed).filter(Boolean);
+    if (!vids.length) return d.preview ? `<section>${head(s.title)}<p class="muted">(Paste an Instagram reel link or upload a video.)</p></section>` : "";
+    return `<section>${head(s.title)}${s.body ? `<p class="center" style="max-width:640px;margin:0 auto 18px">${esc(s.body)}</p>` : ""}
+      <div class="vids vids-${vids.length}">${vids.join("")}</div></section>`;
   },
   testimonials(s, d) {
     const list = d.reviews.slice(0, Number(s.limit) || 6);
@@ -229,6 +262,26 @@ export const RENDER = {
   },
 };
 
+// Photo carousels on product cards: swipe on phones, hover to peek at the next photo on computers.
+export function wireCarousels(root = document) {
+  root.querySelectorAll(".pimgs:not([data-wired])").forEach((el) => {
+    el.dataset.wired = "1";
+    const dots = el.parentElement.querySelectorAll(".pdots span");
+    el.addEventListener("scroll", () => {
+      const i = Math.round(el.scrollLeft / el.clientWidth);
+      dots.forEach((d, j) => d.classList.toggle("on", i === j));
+    }, { passive: true });
+    if (matchMedia("(hover: hover)").matches) {
+      const card = el.closest(".product");
+      let timer;
+      card.addEventListener("mouseenter", () => {
+        let i = 1; el.scrollTo({ left: el.clientWidth, behavior: "smooth" });
+        timer = setInterval(() => { i = (i + 1) % el.children.length; el.scrollTo({ left: i * el.clientWidth, behavior: "smooth" }); }, 1600);
+      });
+      card.addEventListener("mouseleave", () => { clearInterval(timer); el.scrollTo({ left: 0, behavior: "smooth" }); });
+    }
+  });
+}
 export function signupForm(button = "Sign me up", source = "") {
   return `<form class="signup-form" data-source="${esc(source)}"><input type="email" required placeholder="you@email.com" aria-label="Email">
     <button class="btn">${esc(button || "Sign me up")}</button></form>`;

@@ -20,6 +20,15 @@
       <div><label>Email *</label><input name="email" type="email" required maxlength="200"></div>
     </div>
     <label>Phone</label><input name="phone" type="tel" maxlength="50">
+    <label>What kind of piece? *</label>
+    <select name="kind" required>
+      <option value="">Choose one…</option>
+      <option>Crochet</option>
+      <option>Pipe Cleaner Flowers</option>
+      <option>Polymer Clay</option>
+      <option>Bouquet with a crochet piece</option>
+      <option>A mix / something else</option>
+    </select>
     <label>What would you like made? *</label><textarea name="description" required maxlength="5000" placeholder="e.g. A frog amigurumi holding a strawberry, about 8 inches tall"></textarea>
     <div class="row">
       <div><label>Colors</label><input name="colors" maxlength="500"></div>
@@ -39,6 +48,8 @@
 <script type="module">
 import { sb, getSettings, renderChrome, toast } from "./assets/common.js";
 renderChrome(await getSettings(), "custom");
+const kind = new URLSearchParams(location.search).get("kind");
+if (kind) { const sel = document.querySelector("[name=kind]"); if (![...sel.options].some((o) => o.value === kind)) sel.add(new Option(kind)); sel.value = kind; }
 const item = new URLSearchParams(location.search).get("item");
 if (item) {
   const d = document.querySelector("[name=description]");

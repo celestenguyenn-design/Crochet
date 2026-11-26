@@ -397,7 +397,7 @@ async function loadRequests() {
     (urls || []).forEach((u) => { if (u.signedUrl) signed[u.path] = u.signedUrl; });
   }
   el.innerHTML = `<div class="list">${data.length ? data.map((r) => `<div class="card">
-    <div class="head"><h3>${esc(r.name)}</h3><span class="pill">${label(r.status)}</span></div>
+    <div class="head"><h3>${esc(r.name)} ${r.kind ? `<span class="pill">${esc(r.kind)}</span>` : ""}</h3><span class="pill">${label(r.status)}</span></div>
     <div class="muted">${fmtDate(r.created_at)} · ${esc(r.email)} ${r.phone ? "· " + esc(r.phone) : ""}</div>
     <p style="white-space:pre-wrap">${esc(r.description)}</p>
     <p class="muted">${[r.colors && "Colors: " + esc(r.colors), r.size && "Size: " + esc(r.size), r.budget && "Budget: " + esc(r.budget), r.needed_by && "Needed by: " + esc(r.needed_by)].filter(Boolean).join(" · ")}</p>
@@ -439,7 +439,10 @@ async function loadProducts() {
     <p class="muted">Group products (e.g. Plushies, Wearables, Keychains). Shoppers can filter by these, and you can show category tiles on your homepage.</p>
     <div class="list">${categories.map((c) => `<div class="inline cat-row" data-id="${c.id}" style="align-items:center">
       ${safeUrl(c.image_url) ? `<img class="thumb" src="${esc(c.image_url)}">` : `<div class="thumb"></div>`}
+      <div style="max-width:70px"><input name="emoji" value="${esc(c.emoji)}" title="Emoji" placeholder="🧶"></div>
       <div><input name="name" value="${esc(c.name)}"></div>
+      <div style="flex:2; min-width:220px"><input name="description" value="${esc(c.description)}" placeholder="Short description for its page"></div>
+      ${c.slug ? `<a class="btn small secondary" href="category.html?c=${encodeURIComponent(c.slug)}" target="_blank">View page</a>` : ""}
       <div style="max-width:90px"><input name="sort_order" type="number" value="${c.sort_order}" title="Order"></div>
       <input type="file" accept="image/*" data-cat-img style="max-width:200px">
       <button class="btn small" data-cat-save>Save</button><button class="btn small danger" data-cat-del>Delete</button></div>`).join("")}</div>
@@ -451,13 +454,14 @@ async function loadProducts() {
   $("new-product").onclick = () => productDialog({ active: true, sort_order: 0, stock: null, images: [], options: [] });
   $("add-cat").onclick = async () => {
     const name = $("new-cat").value.trim(); if (!name) return;
-    const { error } = await sb.from("categories").insert({ name, sort_order: categories.length });
+    const { error } = await sb.from("categories").insert({ name, slug: slugify(name) || null, sort_order: categories.length + 1 });
     toast(error ? error.message : "Category added"); loadProducts();
   };
   el.querySelectorAll(".cat-row").forEach((row) => {
     const id = row.dataset.id;
     row.querySelector("[data-cat-save]").onclick = async () => {
-      const { error } = await sb.from("categories").update({ name: row.querySelector("[name=name]").value, sort_order: parseInt(row.querySelector("[name=sort_order]").value) || 0 }).eq("id", id);
+      const { error } = await sb.from("categories").update({ name: row.querySelector("[name=name]").value, emoji: row.querySelector("[name=emoji]").value,
+        description: row.querySelector("[name=description]").value, sort_order: parseInt(row.querySelector("[name=sort_order]").value) || 0 }).eq("id", id);
       toast(error ? error.message : "Saved"); loadProducts();
     };
     row.querySelector("[data-cat-del]").onclick = async () => {
@@ -485,7 +489,8 @@ function productDialog(p) {
     <div class="extra-photos" id="extra-photos"></div>
     <input type="file" accept="image/*" multiple id="extra-upload">
     <label>Options <span class="muted" style="font-weight:400">(optional — like size or color)</span></label>
-    <p class="muted" style="margin:0 0 8px; font-size:.9rem">One choice per line. To charge more for a choice, add the extra amount: <code>Large +5</code></p>
+    <p class="muted" style="margin:0 0 8px; font-size:.9rem">One choice per line. To charge more for a choice, add the extra amount: <code>Large +5</code>.
+      Bouquet idea: option name <code>Add a crochet friend</code> with choices <code>No thanks</code> / <code>Mini plush +15</code></p>
     <div id="options-box"></div>
     <button type="button" class="btn small secondary" id="add-option">+ Add an option</button>
     <div class="row"><div><label>Display order</label><input name="sort_order" type="number" value="${p.sort_order ?? 0}"></div>
@@ -633,6 +638,7 @@ function fieldHtml(f, v) {
   if (f.type === "number") return lab + `<input type="number" min="1" max="50" data-key="${f.key}" value="${esc(v)}">`;
   if (f.type === "select") return lab + `<select data-key="${f.key}">${f.options.map(([val, l]) => `<option value="${val}" ${val === v ? "selected" : ""}>${esc(l)}</option>`).join("")}</select>`;
   if (f.type === "category") return lab + `<select data-key="${f.key}"><option value="">— Pick one —</option>${categories.map((c) => `<option value="${c.id}" ${c.id === v ? "selected" : ""}>${esc(c.name)}</option>`).join("")}</select>`;
+  if (f.type === "video") return lab + `<input data-key="${f.key}" value="${esc(v)}" placeholder="Paste an Instagram reel or TikTok link"><input type="file" accept="video/*" data-key-img="${f.key}" style="margin-top:6px"><p class="muted" style="font-size:.85rem;margin:4px 0 0">Or upload a short video (under 50 MB).</p>`;
   if (f.type === "image") return lab + `<input data-key="${f.key}" value="${esc(v)}" placeholder="Upload or paste an image link"><input type="file" accept="image/*" data-key-img="${f.key}" style="margin-top:6px">`;
   return lab + `<input data-key="${f.key}" value="${esc(v)}">`;
 }

@@ -72,7 +72,11 @@ export function renderChrome(s, active, pages = null) {
     <div class="container header-inner">
       <a href="index.html" class="logo">${logo}</a>
       <nav>
-        ${link("index.html", "Shop", "shop")}
+        <div class="nav-drop">
+          <a href="index.html#shop" class="${active === "shop" || String(active).startsWith("cat-") ? "active" : ""}">Shop <span class="caret">▾</span></a>
+          <div class="drop" id="shop-menu"><a href="index.html#shop">🛍️ Shop all</a></div>
+        </div>
+        <span id="nav-cats" class="nav-cats"></span>
         ${link("custom.html", "Custom Orders", "custom")}
         ${link("patterns.html", "Free Patterns", "patterns")}
         ${link("page.html?p=about", "About", "about")}
@@ -98,10 +102,27 @@ export function renderChrome(s, active, pages = null) {
   document.title = base ? `${base} · ${s.shop_name}` : s.shop_name;
   // Use the logo as the browser-tab icon once one is uploaded
   if (safeUrl(s.logo_url)) document.querySelectorAll("link[rel=icon], link[rel=apple-touch-icon]").forEach((l) => { l.href = s.logo_url; l.removeAttribute("type"); l.removeAttribute("sizes"); });
+  paintCategoryMenu(active);
   updateCartCount();
   setupAds(s);
   setupSignupPopup(s);
   setupStats(s);
+}
+
+// ---------- Category menu (Shop ▾) ----------
+function paintCategoryMenu(active) {
+  const paint = (cats) => {
+    const menu = document.getElementById("shop-menu"), mob = document.getElementById("nav-cats");
+    if (!menu) return;
+    menu.innerHTML = `<a href="index.html#shop">🛍️ Shop all</a>` + cats.map((c) => `<a href="category.html?c=${encodeURIComponent(c.slug)}">${esc(c.emoji || "")} ${esc(c.name)}</a>`).join("");
+    // phones: category links sit right in the scrolling menu
+    mob.innerHTML = cats.map((c) => `<a href="category.html?c=${encodeURIComponent(c.slug)}" class="${active === "cat-" + c.slug ? "active" : ""}">${esc(c.name.replace(/^Pipe Cleaner /i, ""))}</a>`).join("");
+  };
+  let cached = []; try { cached = JSON.parse(localStorage.getItem("menu_cats")) || []; } catch {}
+  paint(cached);
+  sb.from("categories").select("name,slug,emoji").eq("show_in_menu", true).not("slug", "is", null).order("sort_order").then(({ data }) => {
+    if (!data) return; localStorage.setItem("menu_cats", JSON.stringify(data)); paint(data);
+  });
 }
 
 // ---------- Social icons ----------

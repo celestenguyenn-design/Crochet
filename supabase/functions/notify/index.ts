@@ -89,8 +89,8 @@ Deno.serve(async (req) => {
       const { data: r } = await db.from("custom_requests").update({ notified_at: new Date().toISOString() })
         .eq("id", id).is("notified_at", null).select("*").maybeSingle();
       if (!r) return Response.json({ skipped: "already notified" });
-      await send(OWNER_EMAIL, `✨ New custom request from ${r.name}`, wrap(s, `
-        <p><b>${esc(r.name)}</b> (${esc(r.email)}${r.phone ? ", " + esc(r.phone) : ""}) wants:</p>
+      await send(OWNER_EMAIL, `✨ New custom request from ${r.name}${r.kind ? " – " + r.kind : ""}`, wrap(s, `
+        <p><b>${esc(r.name)}</b> (${esc(r.email)}${r.phone ? ", " + esc(r.phone) : ""}) wants${r.kind ? ` a <b>${esc(r.kind)}</b> piece` : ""}:</p>
         <p style="white-space:pre-wrap">${esc(r.description)}</p>
         <p>${[r.colors && "Colors: " + esc(r.colors), r.size && "Size: " + esc(r.size), r.budget && "Budget: " + esc(r.budget), r.needed_by && "Needed by: " + esc(r.needed_by)].filter(Boolean).join("<br>")}</p>
         ${(r.photo_paths || []).length ? `<p>📷 ${r.photo_paths.length} photo${r.photo_paths.length > 1 ? "s" : ""} attached — see the Custom Requests tab in your dashboard.</p>` : ""}`), r.email);

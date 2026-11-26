@@ -16,7 +16,7 @@
 <footer id="site-footer"></footer>
 <script type="module">
 import { sb, getSettings, renderChrome, applyTheme, esc, cart, toast, wireSignup } from "./assets/common.js";
-import { renderSections, newSection } from "./assets/sections.js";
+import { renderSections, newSection, wireCarousels } from "./assets/sections.js";
 
 const preview = new URLSearchParams(location.search).has("preview");
 let s = await getSettings();
@@ -39,6 +39,7 @@ const fallback = () => ["hero", "products", "gallery", "shop", "testimonials", "
 const home = document.getElementById("home");
 function render(sections) {
   home.innerHTML = renderSections(sections?.length ? sections : fallback(), data) || `<p class="muted center">Nothing here yet.</p>`;
+  wireCarousels(home);
   const cat = new URLSearchParams(location.search).get("cat");
   if (cat) filterCat(cat);
 }
