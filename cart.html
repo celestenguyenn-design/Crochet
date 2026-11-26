@@ -74,6 +74,7 @@ function paintPay() {
   const opts = [];
   if (s.zelle_handle) opts.push(["zelle", "Zelle", `To <b>${esc(s.zelle_handle)}</b> · no fees`]);
   if (s.venmo_handle) opts.push(["venmo", "Venmo", `To <b>@${esc(s.venmo_handle.replace(/^@/, ""))}</b>`]);
+  if (s.paypal_email) opts.push(["paypal", "PayPal", `To <b>${esc(s.paypal_email)}</b>`]);
   if (!depositPct && s.allow_pay_at_pickup && fulfill() === "pickup") opts.push(["pickup", "Pay at pickup", "Cash or app when you pick up"]);
   const cur = document.querySelector("[name=pay]:checked")?.value;
   $("pay-options").innerHTML = opts.length
@@ -174,6 +175,9 @@ $("form").addEventListener("submit", async (e) => {
     const handle = s.venmo_handle.replace(/^@/, "");
     payMsg = `<p>Send your <b>${amt} ${what}</b> by <b>Venmo</b> to <b>@${esc(handle)}</b> with <b>Order #${n}</b> in the note.</p>
       <p><a class="btn" href="https://venmo.com/${encodeURIComponent(handle)}?txn=pay&amount=${(dueNow / 100).toFixed(2)}&note=${encodeURIComponent("Order #" + n + " " + what)}">Open Venmo</a></p>`;
+  } else if (data.payment_method === "paypal") {
+    payMsg = `<p>Send your <b>${amt} ${what}</b> by <b>PayPal</b> to <b>${esc(s.paypal_email)}</b> with <b>Order #${n}</b> in the note.</p>
+      <p><a class="btn" href="https://www.paypal.com/myaccount/transfer/homepage/pay" target="_blank" rel="noopener">Open PayPal</a></p>`;
   } else payMsg = `<p>You'll pay <b>${money(data.total_cents)}</b> when you pick up.</p>`;
   $("checkout-view").style.display = "none";
   const done = $("done-view");

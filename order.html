@@ -42,7 +42,7 @@ document.getElementById("form").addEventListener("submit", async (e) => {
   const idx = steps.findIndex(([k]) => k === o.status);
   const steps = o.status === "cancelled" ? `<p class="notice"><b>This order was cancelled.</b> Message me if that's a surprise!</p>`
     : `<div class="steps" style="grid-template-columns:repeat(${steps.length},1fr)">${steps.map(([k, l, ic], i) => `<div class="step ${i <= idx ? "done" : ""} ${i === idx ? "current" : ""}"><span>${ic}</span>${l}</div>`).join("")}</div>`;
-  const app = o.payment_method === "zelle" ? "Zelle" : "Venmo";
+  const app = { zelle: "Zelle", venmo: "Venmo", paypal: "PayPal" }[o.payment_method] || "app";
   const owed = o.total_cents - (o.amount_paid_cents || 0);
   const paid = o.payment_status === "paid" ? "✅ Paid in full" : o.payment_status === "refunded" ? "Refunded"
     : o.payment_status === "deposit_paid" ? `✅ Deposit received · ${money(owed)} left to pay`

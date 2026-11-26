@@ -236,7 +236,7 @@ async function loadOrders() {
   });
 }
 function orderCard(o) {
-  const pm = { zelle: "Zelle", venmo: "Venmo", pickup: "Pay at pickup" }[o.payment_method];
+  const pm = { zelle: "Zelle", venmo: "Venmo", paypal: "PayPal", pickup: "Pay at pickup" }[o.payment_method];
   const owed = owedOf(o), paidAmt = o.amount_paid_cents || 0;
   const badge = o.payment_status === "refunded" ? `<div class="paybadge grey">REFUNDED</div>`
     : owed === 0 && o.total_cents > 0 ? `<div class="paybadge green">✓ PAID IN FULL</div>`
@@ -975,6 +975,7 @@ function loadSettings() {
     <h2>Payment options</h2><p class="muted">Leave a handle blank to hide that option at checkout. Customers see these after they order, along with their order number to put in the memo.</p>
     <div class="row"><div><label>Zelle (email or phone)</label><input name="zelle_handle" value="${esc(s.zelle_handle)}"></div>
       <div><label>Venmo username</label><input name="venmo_handle" value="${esc(s.venmo_handle)}" placeholder="@yourname"></div></div>
+    <label>PayPal email</label><input name="paypal_email" type="email" value="${esc(s.paypal_email)}">
     <label>Deposit required (% of the total, paid before you start)</label>
     <input name="deposit_percent" type="number" min="0" max="100" value="${s.deposit_percent ?? 50}">
     <p class="muted" style="font-size:.9rem">50 = half up front, the rest at pickup/before shipping. 100 = pay everything up front. 0 = no deposit (then "Pay at pickup" can be offered).</p>
