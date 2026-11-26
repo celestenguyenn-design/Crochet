@@ -23,6 +23,8 @@
   .stats .card b { font-size: 1.5rem; display: block; }
   .preview-swatch { display: flex; gap: 8px; margin-top: 12px; }
   .preview-swatch span { flex: 1; height: 36px; border-radius: 8px; border: 1px solid var(--line); }
+  .gal-admin { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
+  .gal-admin img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 12px; }
   dialog { border: 0; border-radius: var(--radius); padding: 0; width: min(760px, 95vw); background: var(--bg); color: var(--text); }
   dialog::backdrop { background: rgba(0,0,0,.4); }
   dialog form { padding: 24px; }
@@ -43,6 +45,7 @@
       <button data-tab="orders" class="active">Orders</button>
       <button data-tab="requests">Custom Requests</button>
       <button data-tab="products">Products</button>
+      <button data-tab="gallery">Gallery</button>
       <button data-tab="patterns">Patterns</button>
       <button data-tab="appearance">Appearance</button>
       <button data-tab="settings">Payment &amp; Pickup</button>
@@ -50,6 +53,7 @@
     <section id="tab-orders"></section>
     <section id="tab-requests" hidden></section>
     <section id="tab-products" hidden></section>
+    <section id="tab-gallery" hidden></section>
     <section id="tab-patterns" hidden></section>
     <section id="tab-appearance" hidden></section>
     <section id="tab-settings" hidden></section>
@@ -86,7 +90,7 @@ $("login").addEventListener("submit", async (e) => {
 $("logout").addEventListener("click", async (e) => { e.preventDefault(); await sb.auth.signOut(); boot(); });
 
 // ---------- Tabs ----------
-const loaders = { orders: loadOrders, requests: loadRequests, products: loadProducts, patterns: loadPatterns, appearance: loadAppearance, settings: loadSettings };
+const loaders = { orders: loadOrders, requests: loadRequests, products: loadProducts, gallery: loadGallery, patterns: loadPatterns, appearance: loadAppearance, settings: loadSettings };
 function showTab(name) {
   document.querySelectorAll("#tabs button").forEach((b) => b.classList.toggle("active", b.dataset.tab === name));
   document.querySelectorAll("#app > section").forEach((s) => (s.hidden = s.id !== "tab-" + name));
@@ -204,7 +208,7 @@ async function loadProducts() {
   if (error) { el.innerHTML = `<p class="error">${esc(error.message)}</p>`; return; }
   el.innerHTML = `<p><button class="btn" id="new-product">+ Add product</button></p><div class="list">${data.map((p) => `<div class="card head" style="align-items:center">
     <div style="display:flex; gap:14px; align-items:center">${safeUrl(p.image_url) ? `<img class="thumb" src="${esc(p.image_url)}">` : `<div class="thumb"></div>`}
-    <div><b>${esc(p.name)}</b> ${p.active ? "" : `<span class="pill">Hidden</span>`}<br><span class="muted">${money(p.price_cents)} · ${p.stock === null ? "Made to order" : p.stock + " in stock"}</span></div></div>
+    <div><b>${esc(p.name)}</b> ${p.featured ? `<span class="pill">★ Best seller</span>` : ""} ${p.active ? "" : `<span class="pill">Hidden</span>`}<br><span class="muted">${money(p.price_cents)} · ${p.stock === null ? "Made to order" : p.stock + " in stock"}</span></div></div>
     <button class="btn small secondary" data-edit="${p.id}">Edit</button></div>`).join("") || `<p class="muted">No products yet. Add your first one!</p>`}</div>`;
   $("new-product").onclick = () => productDialog({ active: true, sort_order: 0, stock: null });
   el.querySelectorAll("[data-edit]").forEach((b) => b.onclick = () => productDialog(data.find((p) => p.id === b.dataset.edit)));
@@ -218,7 +222,8 @@ function productDialog(p) {
     <div><label>Quantity in stock</label><input name="stock" type="number" min="0" value="${p.stock ?? ""}" placeholder="Blank = made to order"></div></div>
     ${imgField("image_url", "Photo", p.image_url)}
     <div class="row"><div><label>Display order</label><input name="sort_order" type="number" value="${p.sort_order ?? 0}"></div>
-    <div><label>&nbsp;</label><label style="font-weight:400"><input type="checkbox" name="active" ${p.active ? "checked" : ""}>Show on shop</label></div></div>
+    <div><label>&nbsp;</label><label style="font-weight:400"><input type="checkbox" name="active" ${p.active ? "checked" : ""}>Show on shop</label>
+    <label style="font-weight:400; margin-top:0"><input type="checkbox" name="featured" ${p.featured ? "checked" : ""}>★ Best seller (show at top of home page)</label></div></div>
     <div class="inline"><button class="btn" value="save">Save</button><button class="btn secondary" value="cancel" formnovalidate>Cancel</button>
     ${p.id ? `<button class="btn danger" value="delete" formnovalidate style="margin-left:auto">Delete</button>` : ""}</div></form>`;
   wireUploads(d);
@@ -232,10 +237,45 @@ function productDialog(p) {
     if (d.returnValue !== "save") return;
     const row = { name: f.get("name"), description: f.get("description"), price_cents: toCents(f.get("price")),
       stock: f.get("stock") === "" ? null : parseInt(f.get("stock")), image_url: f.get("image_url"),
-      sort_order: parseInt(f.get("sort_order")) || 0, active: f.get("active") === "on" };
+      sort_order: parseInt(f.get("sort_order")) || 0, active: f.get("active") === "on", featured: f.get("featured") === "on" };
     const { error } = p.id ? await sb.from("products").update(row).eq("id", p.id) : await sb.from("products").insert(row);
     toast(error ? error.message : "Saved"); loadProducts();
   };
+}
+
+// ---------- Gallery ----------
+async function loadGallery() {
+  const el = $("tab-gallery");
+  const { data, error } = await sb.from("gallery").select("*").order("sort_order").order("created_at", { ascending: false });
+  if (error) { el.innerHTML = `<p class="error">${esc(error.message)}</p>`; return; }
+  el.innerHTML = `<div class="card" style="margin-bottom:20px"><h2>Showcase photos</h2>
+    <p class="muted">These appear on your home page. Pick several photos at once if you like. Lower "Order" numbers show first.</p>
+    <input type="file" accept="image/*" multiple id="gal-upload"></div>
+    <div class="gal-admin">${data.map((g) => `<div class="card" data-id="${g.id}">
+      <img src="${esc(g.image_url)}" alt="">
+      <label>Caption</label><input name="caption" value="${esc(g.caption)}" placeholder="optional">
+      <label>Order</label><input name="sort_order" type="number" value="${g.sort_order}">
+      <div class="inline"><button class="btn small" data-save>Save</button><button class="btn small danger" data-del>Delete</button></div>
+    </div>`).join("") || `<p class="muted">No photos yet. Upload some above!</p>`}</div>`;
+  $("gal-upload").onchange = async (e) => {
+    const files = [...e.target.files]; if (!files.length) return;
+    let n = 0;
+    for (const file of files) {
+      toast(`Uploading ${++n} of ${files.length}…`);
+      const url = await uploadImage(file);
+      if (url) await sb.from("gallery").insert({ image_url: url });
+    }
+    toast("Photos added!"); loadGallery();
+  };
+  el.querySelectorAll("[data-save]").forEach((b) => b.onclick = async () => {
+    const c = b.closest("[data-id]");
+    const { error } = await sb.from("gallery").update({ caption: c.querySelector("[name=caption]").value, sort_order: parseInt(c.querySelector("[name=sort_order]").value) || 0 }).eq("id", c.dataset.id);
+    toast(error ? error.message : "Saved"); loadGallery();
+  });
+  el.querySelectorAll("[data-del]").forEach((b) => b.onclick = async () => {
+    if (!confirm("Remove this photo from your gallery?")) return;
+    await sb.from("gallery").delete().eq("id", b.closest("[data-id]").dataset.id); loadGallery();
+  });
 }
 
 // ---------- Patterns ----------
@@ -320,6 +360,8 @@ function loadAppearance() {
     <label>Big headline</label><input name="hero_title" value="${esc(s.hero_title)}">
     <label>Subtitle</label><input name="hero_subtitle" value="${esc(s.hero_subtitle)}">
     ${imgField("hero_image_url", "Banner photo (optional)", s.hero_image_url)}
+    <div class="row"><div><label>Best sellers section title</label><input name="bestsellers_title" value="${esc(s.bestsellers_title)}"></div>
+      <div><label>Gallery section title</label><input name="gallery_title" value="${esc(s.gallery_title)}"></div></div>
     <label>About me</label><textarea name="about_text">${esc(s.about_text)}</textarea>
     <div class="row"><div><label>Instagram link</label><input name="instagram_url" value="${esc(s.instagram_url)}" placeholder="https://instagram.com/…"></div>
       <div><label>TikTok link</label><input name="tiktok_url" value="${esc(s.tiktok_url)}" placeholder="https://tiktok.com/@…"></div></div>
