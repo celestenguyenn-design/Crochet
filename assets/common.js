@@ -103,10 +103,54 @@ export function renderChrome(s, active, pages = null) {
   // Use the logo as the browser-tab icon once one is uploaded
   if (safeUrl(s.logo_url)) document.querySelectorAll("link[rel=icon], link[rel=apple-touch-icon]").forEach((l) => { l.href = s.logo_url; l.removeAttribute("type"); l.removeAttribute("sizes"); });
   paintCategoryMenu(active);
+  trackView();
   updateCartCount();
   setupAds(s);
   setupSignupPopup(s);
   setupStats(s);
+}
+
+// ---------- Traffic (private, no cookies, no IP addresses) ----------
+function trackView() {
+  if (window.__viewTracked || /admin\.html$/.test(location.pathname) || location.search.includes("preview")) return;
+  try { if (localStorage.getItem("is_owner") === "1") return; } catch {} // don't count the shop owner's own visits
+  window.__viewTracked = true;
+  try {
+    let visitor = localStorage.getItem("v_id");
+    if (!visitor) { visitor = Math.random().toString(36).slice(2) + Date.now().toString(36); localStorage.setItem("v_id", visitor); }
+    // Where did this visit come from? Remember it for the whole visit.
+    let source = sessionStorage.getItem("v_src");
+    if (!source) {
+      const qs = new URLSearchParams(location.search), ua = navigator.userAgent;
+      let host = ""; try { host = new URL(document.referrer).hostname.replace(/^www\./, ""); } catch {}
+      if (host === location.hostname) host = "";
+      const known = [["instagram", /instagram/], ["tiktok", /tiktok/], ["facebook", /facebook|fb\.|messenger/], ["google", /google\./], ["pinterest", /pinterest|pin\.it/],
+        ["etsy", /etsy/], ["youtube", /youtube|youtu\.be/], ["bing", /bing\./], ["reddit", /reddit/], ["twitter / X", /twitter|t\.co|x\.com/]];
+      const tag = (qs.get("utm_source") || qs.get("ref") || "").toLowerCase();
+      source = (known.find(([, re]) => re.test(tag) || re.test(host)) || [])[0]
+        || (/Instagram/.test(ua) ? "instagram" : /FBAN|FBAV|FB_IAB/.test(ua) ? "facebook" : /musical_ly|TikTok|BytedanceWebview/.test(ua) ? "tiktok" : "")
+        || (host ? host.slice(0, 60) : "direct");
+      sessionStorage.setItem("v_src", source);
+    }
+    const w = Math.min(screen.width, innerWidth);
+    const device = /iPad|Tablet/i.test(navigator.userAgent) || (w >= 600 && w < 1000 && "ontouchstart" in window) ? "tablet" : w < 600 ? "phone" : "computer";
+    const page = location.pathname.split("/").pop() || "index.html";
+    const id = new URLSearchParams(location.search).get("id") || new URLSearchParams(location.search).get("p") || new URLSearchParams(location.search).get("c");
+    sb.from("page_views").insert({ path: (page + (id ? "?" + id : "")).slice(0, 200), source, device, visitor }).then(() => {});
+  } catch {}
+}
+
+// ---------- Drops ----------
+export const isLocked = (p) => p?.drop_at && new Date(p.drop_at) > new Date();
+export const dropLabel = (d) => new Date(d).toLocaleString(undefined, { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+export function startCountdowns(root = document) {
+  const tick = () => root.querySelectorAll("[data-countdown]").forEach((el) => {
+    const ms = new Date(el.dataset.countdown) - new Date();
+    if (ms <= 0) { el.textContent = "Live now! Refresh the page 🎉"; return; }
+    const d = Math.floor(ms / 864e5), h = Math.floor(ms / 36e5) % 24, m = Math.floor(ms / 6e4) % 60, s = Math.floor(ms / 1e3) % 60;
+    el.textContent = (d ? `${d}d ` : "") + `${h}h ${String(m).padStart(2, "0")}m ${String(s).padStart(2, "0")}s`;
+  });
+  tick(); if (!window.__cdTimer) window.__cdTimer = setInterval(tick, 1000);
 }
 
 // ---------- Category menu (Shop ▾) ----------

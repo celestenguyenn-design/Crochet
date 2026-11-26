@@ -1,6 +1,6 @@
 // Homepage sections: what each section type is, what settings it has, and how it looks.
 // The admin "Homepage" tab builds its editor from SECTION_TYPES, and index.html renders them.
-import { esc, safeUrl, money } from "./common.js";
+import { esc, safeUrl, money, isLocked, dropLabel } from "./common.js";
 import { marked, DOMPurify } from "./vendor/markdown.js";
 
 export const md = (text) => DOMPurify.sanitize(marked.parse(text || ""));
@@ -84,6 +84,28 @@ export const SECTION_TYPES = {
       { key: "video2", label: "Video 2 (optional)", type: "video", default: "" },
     ],
   },
+  drop: {
+    label: "Next drop", icon: "⏰", desc: "Countdown to your next product drop, with a reminder sign-up",
+    fields: [
+      { key: "title", label: "Title", type: "text", default: "Next drop" },
+      { key: "body", label: "Text", type: "textarea", default: "New pieces go live at the time below. Sign up so you don't miss it — they go fast!" },
+    ],
+  },
+  markets: {
+    label: "Markets & events", icon: "📍", desc: "Where to find you next (add events in the Markets tab)",
+    fields: [
+      { key: "title", label: "Title", type: "text", default: "Find me at markets" },
+      { key: "limit", label: "How many", type: "number", default: 4 },
+    ],
+  },
+  instagram: {
+    label: "Instagram feed", icon: "📷", desc: "Your latest Instagram posts & reels, updated automatically (via Behold)",
+    fields: [
+      { key: "title", label: "Title", type: "text", default: "On my Instagram" },
+      { key: "feed", label: "Behold feed link (from behold.so)", type: "text", default: "" },
+      { key: "limit", label: "How many posts", type: "number", default: 6 },
+    ],
+  },
   testimonials: {
     label: "Reviews", icon: "💬", desc: "Customer reviews you've added",
     fields: [
@@ -159,10 +181,11 @@ export function productCard(p) {
   return `<div class="product">${p.featured ? `<span class="ribbon">★ Best seller</span>` : ""}
     <a href="product.html?id=${p.id}" class="img-link">${img}</a><div class="body">
     <h3><a href="product.html?id=${p.id}">${esc(p.name)}</a></h3><div class="price">${from}${money(p.price_cents)}</div>
+    ${isLocked(p) ? `<div class="drop-tag">🔒 Drops ${esc(dropLabel(p.drop_at))}</div><div class="countdown" data-countdown="${esc(p.drop_at)}"></div><button class="btn" disabled>Coming soon</button>` : `
     <div class="stock">${p.stock === null ? "Made to order" : soldOut ? "Sold out" : `${p.stock} available`}</div>
     ${soldOut ? `<button class="btn" disabled>Sold out</button>`
       : hasOptions ? `<a class="btn" href="product.html?id=${p.id}">Choose options</a>`
-      : `<button class="btn" data-add="${p.id}">Add to cart</button>`}
+      : `<button class="btn" data-add="${p.id}">Add to cart</button>`}`}
   </div></div>`;
 }
 const head = (t) => (t ? `<h2 class="section-title">${esc(t)}</h2>` : "");
@@ -228,6 +251,26 @@ export const RENDER = {
     return `<section>${head(s.title)}${s.body ? `<p class="center" style="max-width:640px;margin:0 auto 18px">${esc(s.body)}</p>` : ""}
       <div class="vids vids-${vids.length}">${vids.join("")}</div></section>`;
   },
+  drop(s, d) {
+    const upcoming = d.products.filter(isLocked).sort((a, b) => new Date(a.drop_at) - new Date(b.drop_at));
+    if (!upcoming.length) return d.preview ? `<section>${head(s.title)}<p class="muted">(Set a drop date on a product to show a countdown here.)</p></section>` : "";
+    const when = upcoming[0].drop_at, batch = upcoming.filter((p) => p.drop_at === when);
+    return `<section class="drop-section card center">${head(s.title)}
+      <div class="drop-when">${esc(dropLabel(when))}</div><div class="countdown big" data-countdown="${esc(when)}"></div>
+      ${s.body ? `<p>${esc(s.body)}</p>` : ""}${signupForm("Remind me", "drop")}
+      <div class="grid" style="margin-top:22px; text-align:left">${batch.map(productCard).join("")}</div></section>`;
+  },
+  markets(s, d) {
+    const list = (d.events || []).slice(0, Number(s.limit) || 4);
+    if (!list.length) return d.preview ? `<section>${head(s.title)}<p class="muted">(Add markets in the Markets tab.)</p></section>` : "";
+    return `<section>${head(s.title)}<div class="events">${list.map(eventCard).join("")}</div></section>`;
+  },
+  instagram(s, d) {
+    if (!/^https:\/\/feeds\.behold\.so\/[\w-]+$/.test(s.feed || "")) return d.preview ? `<section>${head(s.title)}<p class="muted">(Paste your Behold feed link to show your Instagram here.)</p></section>` : "";
+    const ig = safeUrl(d.settings.instagram_url);
+    return `<section>${head(s.title)}<div class="ig-grid" data-feed="${esc(s.feed)}" data-limit="${Number(s.limit) || 6}"></div>
+      ${ig ? `<p class="center"><a class="btn secondary" href="${esc(ig)}" target="_blank" rel="noopener">Follow on Instagram</a></p>` : ""}</section>`;
+  },
   testimonials(s, d) {
     const list = d.reviews.slice(0, Number(s.limit) || 6);
     if (!list.length) return d.preview ? `<section>${head(s.title)}<p class="muted">(Add reviews in the Reviews & FAQ tab.)</p></section>` : "";
@@ -281,6 +324,33 @@ export function wireCarousels(root = document) {
       card.addEventListener("mouseleave", () => { clearInterval(timer); el.scrollTo({ left: 0, behavior: "smooth" }); });
     }
   });
+}
+export function eventCard(e) {
+  const start = new Date(e.starts_on + "T12:00"), end = e.ends_on ? new Date(e.ends_on + "T12:00") : null;
+  const map = e.address || e.location;
+  return `<div class="event card"><div class="ev-date"><span>${start.toLocaleString(undefined, { month: "short" })}</span><b>${start.getDate()}</b></div>
+    <div class="ev-body"><h3>${esc(e.name)}</h3>
+      <div class="muted">${start.toLocaleDateString(undefined, { weekday: "long" })}${end && e.ends_on !== e.starts_on ? ` – ${end.toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" })}` : ""}${e.time_text ? " · " + esc(e.time_text) : ""}</div>
+      ${e.location ? `<div>📍 ${esc(e.location)}</div>` : ""}
+      ${e.notes ? `<div class="muted" style="font-size:.92rem">${esc(e.notes)}</div>` : ""}
+      <div class="inline" style="margin-top:8px">${map ? `<a class="btn small secondary" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(map)}">Directions</a>` : ""}
+      ${safeUrl(e.link) ? `<a class="btn small secondary" target="_blank" rel="noopener" href="${esc(e.link)}">Event info</a>` : ""}</div></div></div>`;
+}
+// Instagram feed (Behold JSON): fills in any .ig-grid on the page
+export async function loadInstagram(root = document) {
+  for (const el of root.querySelectorAll(".ig-grid[data-feed]:not([data-done])")) {
+    el.dataset.done = "1";
+    try {
+      const res = await fetch(el.dataset.feed); const j = await res.json();
+      const posts = (Array.isArray(j) ? j : j.posts || []).slice(0, Number(el.dataset.limit) || 6);
+      el.innerHTML = posts.map((p) => {
+        const img = p.sizes?.medium?.mediaUrl || p.thumbnailUrl || (p.mediaType !== "VIDEO" ? p.mediaUrl : "");
+        return `<a class="ig-post" href="${esc(p.permalink)}" target="_blank" rel="noopener">
+          ${safeUrl(img) ? `<img src="${esc(img)}" alt="${esc((p.prunedCaption || p.caption || "Instagram post").slice(0, 100))}" loading="lazy">` : ""}
+          ${p.mediaType === "VIDEO" || p.isReel ? `<span class="ig-badge">▶</span>` : p.mediaType === "CAROUSEL_ALBUM" ? `<span class="ig-badge">❐</span>` : ""}</a>`;
+      }).join("");
+    } catch { el.closest("section")?.remove(); }
+  }
 }
 export function signupForm(button = "Sign me up", source = "") {
   return `<form class="signup-form" data-source="${esc(source)}"><input type="email" required placeholder="you@email.com" aria-label="Email">

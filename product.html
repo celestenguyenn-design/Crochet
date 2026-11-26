@@ -13,7 +13,7 @@
 <header id="site-header"></header>
 <main class="container"><div id="product"><p class="muted">Loading…</p></div></main>
 <script type="module">
-import { sb, getSettings, renderChrome, esc, money, safeUrl, cart, toast } from "./assets/common.js";
+import { sb, getSettings, renderChrome, esc, money, safeUrl, cart, toast, isLocked, dropLabel, startCountdowns } from "./assets/common.js";
 import { md } from "./assets/sections.js";
 const s = await getSettings();
 const id = new URLSearchParams(location.search).get("id");
@@ -24,7 +24,8 @@ else {
   document.title = p.name; renderChrome(s, "shop");
   const photos = [p.image_url, ...(p.images || [])].filter(safeUrl);
   const opts = (p.options || []).filter((o) => o.values?.length);
-  const soldOut = p.stock === 0;
+  const locked = isLocked(p);
+  const soldOut = p.stock === 0 || locked;
   el.innerHTML = `<p><a href="index.html#shop">← Back to shop</a></p>
   <div class="pdp">
     <div class="pdp-photos">
@@ -37,10 +38,12 @@ else {
       <div class="price big" id="price">${money(p.price_cents)}</div>
       ${opts.map((o, i) => `<label>${esc(o.name)}</label><div class="opt-group" data-opt="${i}">
         ${o.values.map((v) => `<button type="button" class="opt" data-label="${esc(v.label)}">${esc(v.label)}${v.price_delta_cents ? ` <small>(${v.price_delta_cents > 0 ? "+" : "−"}${money(Math.abs(v.price_delta_cents))})</small>` : ""}</button>`).join("")}</div>`).join("")}
-      <div class="stock" style="margin:14px 0 6px">${p.stock === null ? "Made to order" : soldOut ? "Sold out" : `${p.stock} available`}</div>
+      ${locked ? `<div class="drop-box"><b>🔒 Drops ${esc(dropLabel(p.drop_at))}</b><div class="countdown big" data-countdown="${esc(p.drop_at)}"></div></div>`
+        : `<div class="stock" style="margin:14px 0 6px">${p.stock === null ? "Made to order" : soldOut ? "Sold out" : `${p.stock} available`}</div>`}
       <div class="inline" style="align-items:center">
         <input id="qty" class="qty" type="number" min="1" max="${p.stock ?? 100}" value="1" ${soldOut ? "disabled" : ""}>
-        <button class="btn" id="add" ${soldOut ? "disabled" : ""}>${soldOut ? "Sold out" : "Add to cart"}</button>
+        <button class="btn" id="add" ${soldOut ? "disabled" : ""}>${locked ? "Coming soon" : soldOut ? "Sold out" : "Add to cart"}</button>
+        <button class="btn secondary small" id="share" type="button">🔗 Share</button>
       </div>
       <p class="error" id="err"></p>
       ${s.order_note ? `<p class="order-note">⏳ ${esc(s.order_note)}</p>` : ""}
@@ -48,6 +51,13 @@ else {
       <div class="desc-full">${md(p.description)}</div>
     </div>
   </div>`;
+  startCountdowns(el);
+  document.getElementById("share").onclick = async () => {
+    // Share the preview page (shows a photo + price in Messenger, Facebook, iMessage…)
+    const url = (s.site_url || location.href.replace(/[^/]*$/, "")).replace(/\/?$/, "/") + "p/" + p.id + ".html";
+    if (navigator.share) { try { await navigator.share({ title: p.name, url }); } catch {} }
+    else { await navigator.clipboard.writeText(url); toast("Link copied!"); }
+  };
   const chosen = {};
   const update = () => {
     let price = p.price_cents;

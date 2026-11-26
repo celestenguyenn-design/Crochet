@@ -14,7 +14,7 @@
 <main class="container" id="cat-page"><p class="muted">Loading…</p></main>
 <footer id="site-footer"></footer>
 <script type="module">
-import { sb, getSettings, renderChrome, esc, safeUrl, cart, toast } from "./assets/common.js";
+import { sb, getSettings, renderChrome, esc, safeUrl, cart, toast, startCountdowns } from "./assets/common.js";
 import { productCard, wireCarousels, md } from "./assets/sections.js";
 const s = await getSettings();
 const slug = new URLSearchParams(location.search).get("c");
@@ -35,7 +35,7 @@ else {
     <div class="grid" id="grid" style="margin-top:28px">${(products || []).length ? products.map(productCard).join("")
       : `<div class="card center" style="grid-column:1/-1"><p>New ${esc(c.name.toLowerCase())} pieces are coming soon! 💕</p>
          <a class="btn" href="custom.html?kind=${encodeURIComponent(c.name)}">Request one now</a></div>`}</div>`;
-  wireCarousels(el);
+  wireCarousels(el); startCountdowns(el);
   el.addEventListener("click", (e) => {
     const add = e.target.closest("[data-add]"); if (!add) return;
     const p = products.find((x) => x.id === add.dataset.add);

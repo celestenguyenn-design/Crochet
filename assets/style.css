@@ -419,3 +419,27 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--p
 .cat-hero h1 { margin-bottom: 8px; }
 @media (max-width: 640px) { .cat-hero.has-img { grid-template-columns: 1fr; } .cat-hero img { aspect-ratio: 16/10; } .cat-hero { padding: 18px; } }
 .notice.combo { margin-top: 20px; }
+
+/* ===== Drops ===== */
+.drop-tag { font-weight: 700; color: var(--primary); font-size: .9rem; }
+.countdown { font-variant-numeric: tabular-nums; font-weight: 700; color: var(--text); font-size: .9rem; }
+.countdown.big { font-size: 1.8rem; color: var(--primary); margin: 6px 0; font-family: var(--font-heading); }
+.drop-when { font-weight: 700; font-size: 1.1rem; }
+.drop-section .section-title { justify-content: center; }
+.drop-box { background: color-mix(in srgb, var(--accent) 30%, transparent); border-radius: 16px; padding: 12px 16px; margin: 14px 0; }
+
+/* ===== Markets ===== */
+.events { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+.event { display: flex; gap: 16px; align-items: flex-start; }
+.ev-date { flex: 0 0 64px; text-align: center; background: var(--primary); color: #fff; border-radius: 16px; padding: 8px 0; }
+.ev-date span { display: block; font-size: .8rem; text-transform: uppercase; font-weight: 700; letter-spacing: 1px; }
+.ev-date b { font-size: 1.7rem; line-height: 1; font-family: var(--font-heading); }
+.ev-body h3 { margin: 0 0 4px; }
+
+/* ===== Instagram feed ===== */
+.ig-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; margin-bottom: 16px; }
+.ig-post { position: relative; display: block; aspect-ratio: 1; border-radius: 16px; overflow: hidden; background: color-mix(in srgb, var(--accent) 30%, var(--bg)); }
+.ig-post img { width: 100%; height: 100%; object-fit: cover; transition: transform .3s; }
+.ig-post:hover img { transform: scale(1.06); }
+.ig-badge { position: absolute; top: 8px; right: 8px; background: rgba(0,0,0,.55); color: #fff; border-radius: 999px; width: 28px; height: 28px; display: grid; place-items: center; font-size: .8rem; }
+@media (max-width: 640px) { .ig-grid { grid-template-columns: repeat(3, 1fr); gap: 4px; } .ig-post { border-radius: 8px; } }

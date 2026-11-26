@@ -15,23 +15,25 @@
 <dialog id="lightbox" class="lightbox"></dialog>
 <footer id="site-footer"></footer>
 <script type="module">
-import { sb, getSettings, renderChrome, applyTheme, esc, cart, toast, wireSignup } from "./assets/common.js";
-import { renderSections, newSection, wireCarousels } from "./assets/sections.js";
+import { sb, getSettings, renderChrome, applyTheme, esc, cart, toast, wireSignup, startCountdowns } from "./assets/common.js";
+import { renderSections, newSection, wireCarousels, loadInstagram } from "./assets/sections.js";
 
 const preview = new URLSearchParams(location.search).has("preview");
 let s = await getSettings();
 renderChrome(s, "shop");
 
 const q = (t, sel = "*") => sb.from(t).select(sel);
-const [products, categories, gallery, reviews, faqs, patterns] = await Promise.all([
+const today = new Date().toISOString().slice(0, 10);
+const [products, categories, gallery, reviews, faqs, patterns, events] = await Promise.all([
   q("products").order("sort_order").order("created_at", { ascending: false }),
   q("categories").order("sort_order").order("name"),
   q("gallery").order("sort_order").order("created_at", { ascending: false }),
   q("reviews").eq("visible", true).order("sort_order").order("created_at", { ascending: false }),
   q("faqs").order("sort_order"),
   q("patterns", "slug,title,summary,cover_image_url,difficulty,published_at").eq("published", true).order("published_at", { ascending: false }).limit(12),
+  q("events").or(`ends_on.gte.${today},and(ends_on.is.null,starts_on.gte.${today})`).order("starts_on").limit(20),
 ]).then((rs) => rs.map((r) => r.data || []));
-const data = { products, categories, gallery, reviews, faqs, patterns, settings: s, preview };
+const data = { products, categories, gallery, reviews, faqs, patterns, events, settings: s, preview };
 
 // Older setups without saved sections get a sensible default layout.
 const fallback = () => ["hero", "products", "gallery", "shop", "testimonials", "faq"].map(newSection);
@@ -39,7 +41,7 @@ const fallback = () => ["hero", "products", "gallery", "shop", "testimonials", "
 const home = document.getElementById("home");
 function render(sections) {
   home.innerHTML = renderSections(sections?.length ? sections : fallback(), data) || `<p class="muted center">Nothing here yet.</p>`;
-  wireCarousels(home);
+  wireCarousels(home); startCountdowns(home); loadInstagram(home);
   const cat = new URLSearchParams(location.search).get("cat");
   if (cat) filterCat(cat);
 }

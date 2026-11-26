@@ -76,6 +76,15 @@
   .order-edit { margin-top: 12px; } .order-edit summary { font-weight: 700; color: var(--primary); }
   .btn.pirate { background: #1e4f86; box-shadow: none; }
   .pre-table { width: 100%; }
+  .tchart { display: flex; align-items: flex-end; gap: 2px; height: 160px; padding-top: 10px; }
+  .tcol { flex: 1; height: 100%; display: flex; align-items: flex-end; }
+  .tcol span { width: 100%; background: var(--primary); border-radius: 4px 4px 0 0; min-height: 2px; opacity: .85; }
+  .tcol:hover span { opacity: 1; }
+  .tchart-axis { display: flex; justify-content: space-between; font-size: .8rem; color: var(--muted); margin-top: 4px; }
+  .tbar { display: grid; grid-template-columns: minmax(120px, 1.2fr) 2fr auto auto; gap: 10px; align-items: center; padding: 5px 0; }
+  .tbar .tl { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tbar .tt { background: var(--line); border-radius: 999px; height: 10px; overflow: hidden; }
+  .tbar .tt span { display: block; height: 100%; background: var(--primary); border-radius: 999px; }
   .gal-admin { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
   .gal-admin img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 12px; }
   dialog { border: 0; border-radius: var(--radius); padding: 0; width: min(760px, 95vw); background: var(--bg); color: var(--text); }
@@ -106,6 +115,8 @@
       <button data-tab="reviews">Reviews &amp; FAQ</button>
       <button data-tab="pages">Pages</button>
       <button data-tab="marketing">Marketing</button>
+      <button data-tab="markets">Markets</button>
+      <button data-tab="traffic">📈 Traffic</button>
       <button data-tab="appearance">Appearance</button>
       <button data-tab="settings">Payment &amp; Pickup</button>
     </div>
@@ -119,6 +130,8 @@
     <section id="tab-reviews" hidden></section>
     <section id="tab-pages" hidden></section>
     <section id="tab-marketing" hidden></section>
+    <section id="tab-markets" hidden></section>
+    <section id="tab-traffic" hidden></section>
     <section id="tab-patterns" hidden></section>
     <section id="tab-appearance" hidden></section>
     <section id="tab-settings" hidden></section>
@@ -145,6 +158,7 @@ async function boot() {
     await sb.auth.signOut(); return;
   }
   $("login").style.display = "none"; $("app").style.display = ""; $("logout").style.display = "";
+  localStorage.setItem("is_owner", "1");
   showTab("orders");
 }
 $("login").addEventListener("submit", async (e) => {
@@ -156,7 +170,7 @@ $("login").addEventListener("submit", async (e) => {
 $("logout").addEventListener("click", async (e) => { e.preventDefault(); await sb.auth.signOut(); boot(); });
 
 // ---------- Tabs ----------
-const loaders = { orders: loadOrders, requests: loadRequests, preorders: loadPreorders, messages: loadMessages, products: loadProducts, homepage: loadHomepage, gallery: loadGallery, reviews: loadReviews, pages: loadPages, marketing: loadMarketing, patterns: loadPatterns, appearance: loadAppearance, settings: loadSettings };
+const loaders = { orders: loadOrders, requests: loadRequests, preorders: loadPreorders, messages: loadMessages, products: loadProducts, homepage: loadHomepage, gallery: loadGallery, reviews: loadReviews, pages: loadPages, marketing: loadMarketing, markets: loadMarkets, traffic: loadTraffic, patterns: loadPatterns, appearance: loadAppearance, settings: loadSettings };
 function showTab(name) {
   document.querySelectorAll("#tabs button").forEach((b) => b.classList.toggle("active", b.dataset.tab === name));
   document.querySelectorAll("#app > section").forEach((s) => (s.hidden = s.id !== "tab-" + name));
@@ -216,9 +230,15 @@ async function loadOrders() {
       <div class="card"><b>${money(live.reduce((t, o) => t + (o.amount_paid_cents || 0), 0))}</b>Received</div>
       <div class="card"><b>${money(live.filter((o) => o.payment_status !== "refunded").reduce((t, o) => t + owedOf(o), 0))}</b>Still owed to you</div>
     </div>
-    <div class="filters"><select id="of">${Object.entries(FILTERS).map(([k, [l]]) => `<option value="${k}" ${k === orderFilter ? "selected" : ""}>${l}</option>`).join("")}</select></div>
+    <div class="filters"><button class="btn small secondary" id="orders-csv">⬇ Download spreadsheet</button><select id="of">${Object.entries(FILTERS).map(([k, [l]]) => `<option value="${k}" ${k === orderFilter ? "selected" : ""}>${l}</option>`).join("")}</select></div>
     <div class="list">${shown.length ? shown.map(orderCard).join("") : `<p class="muted">No orders here.</p>`}</div>`;
   $("of").onchange = (e) => { orderFilter = e.target.value; loadOrders(); };
+  $("orders-csv").onclick = () => downloadCSV("orders", [
+    ["Order #", "Date", "Customer", "Email", "Phone", "Items", "Pickup/Ship", "Ship to", "Subtotal", "Discount", "Code", "Shipping", "Total", "Deposit", "Paid", "Still owed", "Payment method", "Payment status", "Order status", "Tracking", "Notes"],
+    ...orders.map((o) => [o.order_number, o.created_at.slice(0, 10), o.customer_name, o.email, o.phone,
+      o.order_items.map((i) => `${i.quantity} x ${i.name}`).join("; "), o.fulfillment, addrText(o.ship_address).replace(/\n/g, ", "),
+      dollars(o.subtotal_cents), dollars(o.discount_cents), o.discount_code, dollars(o.shipping_cents), dollars(o.total_cents), dollars(o.deposit_cents),
+      dollars(o.amount_paid_cents), dollars(owedOf(o)), o.payment_method, PAY_LABEL[o.payment_status], STATUS_LABEL[o.status], o.tracking_number, o.admin_notes])]);
   const save = async (id, patch) => {
     const { error } = await sb.from("orders").update(patch).eq("id", id);
     toast(error ? error.message : "Saved"); if (!error) loadOrders();
@@ -306,7 +326,7 @@ async function loadPreorders() {
     : p.paid_cents > 0 ? `<span class="paybadge yellow">PAID ${money(p.paid_cents)}${owedOf(p) != null ? ` · OWES ${money(owedOf(p))}` : ""}</span>`
     : `<span class="paybadge red">NOT PAID</span>`;
   el.innerHTML = `<div class="head"><p class="muted" style="margin:0">Your private work list, in order. Only you can see this.
-      Use ↑ ↓ to change the order.</p><button class="btn small" id="new-pre">+ Add pre-order</button></div>
+      Use ↑ ↓ to change the order.</p><span><button class="btn small secondary" id="pre-csv">⬇ Spreadsheet</button> <button class="btn small" id="new-pre">+ Add pre-order</button></span></div>
     <label style="font-weight:400"><input type="checkbox" id="pre-done" ${preShowDone ? "checked" : ""}>Show delivered</label>
     <div class="stats" style="margin-top:12px">
       <div class="card"><b>${data.filter((p) => p.status !== "delivered").length}</b>To make</div>
@@ -333,6 +353,9 @@ async function loadPreorders() {
         <button class="btn small secondary" data-edit>Edit</button></div>
     </div>`).join("") || `<p class="muted">No pre-orders.</p>`}</div>`;
   $("pre-done").onchange = (e) => { preShowDone = e.target.checked; loadPreorders(); };
+  $("pre-csv").onclick = () => downloadCSV("pre-orders", [["#", "Customer", "From", "Contact", "Items", "Pattern notes", "Total", "Paid", "Paid in full", "Payment note", "Needs shipping", "Shipping paid", "Address", "Status", "Notes"],
+    ...data.map((p, i) => [i + 1, p.customer_name, p.source, p.contact, p.items, p.pattern_notes, dollars(p.total_cents), dollars(p.paid_cents), p.paid_in_full ? "yes" : "no",
+      p.payment_note, p.needs_shipping ? "yes" : "no", p.shipping_paid ? "yes" : "no", p.shipping_address, PRE_STATUS[p.status], p.notes])]);
   $("new-pre").onclick = () => preDialog({ position: (data.at(-1)?.position || 0) + 1, paid_cents: 0, status: "waiting" });
   const upd = async (id, patch) => { const { error } = await sb.from("preorders").update(patch).eq("id", id); toast(error ? error.message : "Saved"); loadPreorders(); };
   el.querySelectorAll(".order").forEach((card) => {
@@ -449,8 +472,12 @@ async function loadProducts() {
     <div class="inline"><div><input id="new-cat" placeholder="New category name"></div><button class="btn small" id="add-cat">+ Add category</button></div></details>
     <p><button class="btn" id="new-product">+ Add product</button></p><div class="list">${data.map((p) => `<div class="card head" style="align-items:center">
     <div style="display:flex; gap:14px; align-items:center">${safeUrl(p.image_url) ? `<img class="thumb" src="${esc(p.image_url)}">` : `<div class="thumb"></div>`}
-    <div><b>${esc(p.name)}</b> ${p.featured ? `<span class="pill">★ Best seller</span>` : ""} ${p.active ? "" : `<span class="pill">Hidden</span>`}<br><span class="muted">${money(p.price_cents)} · ${p.stock === null ? "Made to order" : p.stock + " in stock"}${catName(p.category_id) ? " · " + esc(catName(p.category_id)) : ""}${(p.options || []).length ? " · has options" : ""}</span></div></div>
-    <button class="btn small secondary" data-edit="${p.id}">Edit</button></div>`).join("") || `<p class="muted">No products yet. Add your first one!</p>`}</div>`;
+    <div><b>${esc(p.name)}</b> ${p.featured ? `<span class="pill">★ Best seller</span>` : ""} ${p.active ? "" : `<span class="pill">Hidden</span>`}<br><span class="muted">${money(p.price_cents)} · ${p.stock === null ? "Made to order" : p.stock + " in stock"}${catName(p.category_id) ? " · " + esc(catName(p.category_id)) : ""}${(p.options || []).length ? " · has options" : ""}${p.drop_at && new Date(p.drop_at) > new Date() ? " · ⏰ drops " + new Date(p.drop_at).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : ""}</span></div></div>
+    <span><button class="btn small secondary" data-share="${p.id}" title="Copy a link that shows a photo preview in Messenger, Facebook, iMessage…">🔗 Share link</button> <button class="btn small secondary" data-edit="${p.id}">Edit</button></span></div>`).join("") || `<p class="muted">No products yet. Add your first one!</p>`}</div>`;
+  el.querySelectorAll("[data-share]").forEach((b) => b.onclick = async () => {
+    await navigator.clipboard.writeText((settings.site_url || "").replace(/\/?$/, "/") + "p/" + b.dataset.share + ".html");
+    toast("Share link copied! (New products get their preview within a few hours.)");
+  });
   $("new-product").onclick = () => productDialog({ active: true, sort_order: 0, stock: null, images: [], options: [] });
   $("add-cat").onclick = async () => {
     const name = $("new-cat").value.trim(); if (!name) return;
@@ -483,6 +510,8 @@ function productDialog(p) {
     <label>Description</label><textarea name="description">${esc(p.description)}</textarea>
     <div class="row"><div><label>Price ($) *</label><input name="price" type="number" step="0.01" min="0" required value="${p.price_cents != null ? (p.price_cents / 100).toFixed(2) : ""}"></div>
     <div><label>Quantity in stock</label><input name="stock" type="number" min="0" value="${p.stock ?? ""}" placeholder="Blank = made to order"></div></div>
+    <label>⏰ Drop date & time (optional)</label><input name="drop_at" type="datetime-local" value="${p.drop_at ? new Date(new Date(p.drop_at).getTime() - new Date().getTimezoneOffset() * 6e4).toISOString().slice(0, 16) : ""}">
+    <p class="muted" style="margin:4px 0 0; font-size:.9rem">Leave blank to sell now. If set, the item shows a countdown and can't be bought until then.</p>
     <label>Category</label><select name="category_id"><option value="">— None —</option>${categories.map((c) => `<option value="${c.id}" ${c.id === p.category_id ? "selected" : ""}>${esc(c.name)}</option>`).join("")}</select>
     ${imgField("image_url", "Main photo", p.image_url)}
     <label>More photos</label>
@@ -539,7 +568,8 @@ function productDialog(p) {
     const row = { name: f.get("name"), description: f.get("description"), price_cents: toCents(f.get("price")),
       stock: f.get("stock") === "" ? null : parseInt(f.get("stock")), image_url: f.get("image_url"),
       sort_order: parseInt(f.get("sort_order")) || 0, active: f.get("active") === "on", featured: f.get("featured") === "on",
-      category_id: f.get("category_id") || null, images: extras, options: readOptions() };
+      category_id: f.get("category_id") || null, images: extras, options: readOptions(),
+      drop_at: f.get("drop_at") ? new Date(f.get("drop_at")).toISOString() : null };
     const { error } = p.id ? await sb.from("products").update(row).eq("id", p.id) : await sb.from("products").insert(row);
     toast(error ? error.message : "Saved"); loadProducts();
   };
@@ -730,6 +760,98 @@ function pageDialog(pg) {
     const { error } = pg.id ? await sb.from("pages").update(row).eq("id", pg.id) : await sb.from("pages").insert(row);
     toast(error ? (error.code === "23505" ? "A page with that name already exists" : error.message) : "Saved"); loadPages();
   };
+}
+
+// ---------- Spreadsheet downloads ----------
+function downloadCSV(name, rows) {
+  const cell = (v) => { const t = v == null ? "" : String(v); return /[",\n]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t; };
+  const csv = rows.map((r) => r.map(cell).join(",")).join("\n");
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob(["﻿" + csv], { type: "text/csv" }));
+  a.download = `${name}-${new Date().toISOString().slice(0, 10)}.csv`; a.click();
+}
+const dollars = (c) => c == null ? "" : (c / 100).toFixed(2);
+
+// ---------- Markets & events ----------
+async function loadMarkets() {
+  const el = $("tab-markets");
+  const { data, error } = await sb.from("events").select("*").order("starts_on", { ascending: false });
+  if (error) { el.innerHTML = `<p class="error">${esc(error.message)}</p>`; return; }
+  const today = new Date().toISOString().slice(0, 10);
+  const up = data.filter((e) => (e.ends_on || e.starts_on) >= today).reverse(), past = data.filter((e) => (e.ends_on || e.starts_on) < today);
+  const row = (e) => `<div class="card head" style="align-items:center"><div><b>${esc(e.name)}</b><br><span class="muted">${new Date(e.starts_on + "T12:00").toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric", year: "numeric" })}${e.ends_on && e.ends_on !== e.starts_on ? " – " + new Date(e.ends_on + "T12:00").toLocaleDateString(undefined, { month: "short", day: "numeric" }) : ""}${e.time_text ? " · " + esc(e.time_text) : ""}${e.location ? " · " + esc(e.location) : ""}</span></div>
+    <button class="btn small secondary" data-edit="${e.id}">Edit</button></div>`;
+  el.innerHTML = `<div class="head"><p class="muted" style="margin:0">Markets and pop-ups you'll be at. Show them on your homepage with the <b>📍 Markets & events</b> section. Past events hide automatically.</p>
+    <button class="btn" id="new-ev">+ Add market</button></div>
+    <h3 style="margin-top:20px">Upcoming</h3><div class="list">${up.map(row).join("") || `<p class="muted">Nothing scheduled.</p>`}</div>
+    ${past.length ? `<details style="margin-top:16px"><summary class="muted">Past (${past.length})</summary><div class="list" style="margin-top:10px">${past.map(row).join("")}</div></details>` : ""}`;
+  $("new-ev").onclick = () => eventDialog({});
+  el.querySelectorAll("[data-edit]").forEach((b) => b.onclick = () => eventDialog(data.find((e) => e.id === b.dataset.edit)));
+}
+function eventDialog(e) {
+  const d = $("dlg");
+  d.innerHTML = `<form method="dialog"><h2>${e.id ? "Edit" : "New"} market / event</h2>
+    <label>Name *</label><input name="name" required value="${esc(e.name)}" placeholder="e.g. Holiday Craft Fair">
+    <div class="row"><div><label>Date *</label><input name="starts_on" type="date" required value="${esc(e.starts_on)}"></div>
+      <div><label>End date (if more than one day)</label><input name="ends_on" type="date" value="${esc(e.ends_on)}"></div></div>
+    <label>Time</label><input name="time_text" value="${esc(e.time_text)}" placeholder="e.g. 10am – 4pm">
+    <label>Place name</label><input name="location" value="${esc(e.location)}" placeholder="e.g. Levittown Library">
+    <label>Address (for the Directions button)</label><input name="address" value="${esc(e.address)}">
+    <label>Event link (optional)</label><input name="link" value="${esc(e.link)}" placeholder="https://…">
+    <label>Note</label><input name="notes" value="${esc(e.notes)}" placeholder="e.g. Booth #12 — bringing new flower bouquets!">
+    <div class="inline"><button class="btn" value="save">Save</button><button class="btn secondary" value="cancel" formnovalidate>Cancel</button>
+    ${e.id ? `<button class="btn danger" value="delete" formnovalidate style="margin-left:auto">Delete</button>` : ""}</div></form>`;
+  d.returnValue = ""; d.showModal();
+  d.onclose = async () => {
+    const f = Object.fromEntries(new FormData(d.querySelector("form")));
+    if (d.returnValue === "delete") { if (confirm("Delete this event?")) { await sb.from("events").delete().eq("id", e.id); loadMarkets(); } return; }
+    if (d.returnValue !== "save") return;
+    if (!f.ends_on) f.ends_on = null;
+    const { error } = e.id ? await sb.from("events").update(f).eq("id", e.id) : await sb.from("events").insert(f);
+    toast(error ? error.message : "Saved"); loadMarkets();
+  };
+}
+
+// ---------- Traffic ----------
+let trafficDays = 30;
+const SOURCE_ICON = { instagram: "📷", tiktok: "🎵", facebook: "📘", google: "🔎", pinterest: "📌", etsy: "🧡", youtube: "▶️", direct: "🔗" };
+const pageName = (p) => {
+  const [f, id] = p.split("?");
+  const names = { "index.html": "Home page", "cart.html": "Cart / checkout", "custom.html": "Custom orders", "patterns.html": "Free patterns list", "contact.html": "Contact", "faq.html": "FAQ", "order.html": "Order status" };
+  if (f === "product.html") return `Product: ${productNames[id] || id}`;
+  if (f === "pattern.html") return `Pattern: ${id}`;
+  if (f === "category.html") return `Category: ${id}`;
+  if (f === "page.html") return `Page: ${id}`;
+  return names[f] || f;
+};
+let productNames = {};
+async function loadTraffic() {
+  const el = $("tab-traffic");
+  el.innerHTML = `<p class="muted">Loading…</p>`;
+  const [{ data: t, error }, { data: prods }] = await Promise.all([sb.rpc("traffic_summary", { p_days: trafficDays }), sb.from("products").select("id,name")]);
+  if (error) { el.innerHTML = `<p class="error">${esc(error.message)}</p>`; return; }
+  productNames = Object.fromEntries((prods || []).map((p) => [p.id, p.name]));
+  const max = Math.max(1, ...t.daily.map((d) => d.visitors));
+  const bar = (label, n, total, extra = "") => `<div class="tbar"><span class="tl">${label}</span><span class="tt"><span style="width:${Math.max(2, (n / Math.max(1, total)) * 100)}%"></span></span><b>${n}</b>${extra}</div>`;
+  const topSrc = Math.max(1, ...t.sources.map((x) => x.visitors)), topPage = Math.max(1, ...t.pages.map((x) => x.views)), devTotal = t.devices.reduce((a, x) => a + x.visitors, 0);
+  el.innerHTML = `<div class="head"><p class="muted" style="margin:0">Visits to your shop (your own visits while logged in to the dashboard aren't counted). Private: no cookies, no personal info.</p>
+      <select id="tdays" style="width:auto">${[[7, "Last 7 days"], [30, "Last 30 days"], [90, "Last 90 days"], [365, "Last year"]].map(([v, l]) => `<option value="${v}" ${v === trafficDays ? "selected" : ""}>${l}</option>`).join("")}</select></div>
+    <div class="stats" style="margin-top:14px">
+      <div class="card"><b>${t.today_visitors}</b>Visitors today</div>
+      <div class="card"><b>${t.visitors}</b>Visitors (${trafficDays} days)</div>
+      <div class="card"><b>${t.views}</b>Page views (${trafficDays} days)</div>
+      <div class="card"><b>${t.visitors ? (t.views / t.visitors).toFixed(1) : 0}</b>Pages per visitor</div>
+    </div>
+    <div class="card"><h3>Visitors per day</h3>
+      <div class="tchart">${t.daily.map((d) => `<div class="tcol" title="${new Date(d.day).toLocaleDateString(undefined, { month: "short", day: "numeric" })}: ${d.visitors} visitors, ${d.views} views"><span style="height:${(d.visitors / max) * 100}%"></span></div>`).join("")}</div>
+      <div class="tchart-axis"><span>${new Date(t.daily[0]?.day).toLocaleDateString(undefined, { month: "short", day: "numeric" })}</span><span>Today</span></div></div>
+    <div class="order-grid" style="margin-top:18px">
+      <div class="card"><h3>Where visitors come from</h3>${t.sources.map((x) => bar(`${SOURCE_ICON[x.source] || "🌐"} ${esc(x.source[0].toUpperCase() + x.source.slice(1))}`, x.visitors, topSrc)).join("") || `<p class="muted">No visits yet.</p>`}
+        <p class="muted" style="font-size:.85rem">"Direct" = typed your address, a bookmark, or a link from a text message.</p></div>
+      <div class="card"><h3>Phone vs computer</h3>${t.devices.map((x) => bar({ phone: "📱 Phone", tablet: "📲 Tablet", computer: "💻 Computer" }[x.device], x.visitors, devTotal, `<span class="muted"> ${Math.round((x.visitors / Math.max(1, devTotal)) * 100)}%</span>`)).join("") || `<p class="muted">No visits yet.</p>`}</div>
+    </div>
+    <div class="card" style="margin-top:18px"><h3>Most viewed pages</h3>${t.pages.map((x) => bar(esc(pageName(x.path)), x.views, topPage)).join("") || `<p class="muted">No visits yet.</p>`}</div>`;
+  $("tdays").onchange = (e) => { trafficDays = +e.target.value; loadTraffic(); };
 }
 
 // ---------- Messages (Contact page) ----------
@@ -931,6 +1053,9 @@ function loadAppearance() {
     <p class="muted" style="font-size:.9rem">Wide pictures work best (about 4× wider than tall). Other homepage sections and the About text are in the <b>Homepage</b> tab.</p>
     <div class="row"><div><label>Instagram link</label><input name="instagram_url" value="${esc(s.instagram_url)}" placeholder="https://instagram.com/…"></div>
       <div><label>TikTok link</label><input name="tiktok_url" value="${esc(s.tiktok_url)}" placeholder="https://tiktok.com/@…"></div></div>
+    <h2 style="margin-top:28px">Website address</h2>
+    <label>Your site's address</label><input name="site_url" value="${esc(s.site_url)}" placeholder="https://hookedbyceleste.com/">
+    <p class="muted" style="font-size:.9rem">Used for share links, link previews and Google. Change it to https://hookedbyceleste.com/ once your domain is connected.</p>
     <h2 style="margin-top:28px">Visitor stats</h2>
     <label>GoatCounter code</label><input name="goatcounter_code" value="${esc(s.goatcounter_code)}" placeholder="e.g. hookedbyceleste">
     <p class="muted" style="font-size:.9rem">Free, no cookies. Sign up at goatcounter.com, pick a code (it becomes <i>yourcode</i>.goatcounter.com), and type just the code here. Your stats are then at that address.</p>
