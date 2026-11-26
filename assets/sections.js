@@ -182,7 +182,7 @@ export function productCard(p) {
     <a href="product.html?id=${p.id}" class="img-link">${img}</a><div class="body">
     <h3><a href="product.html?id=${p.id}">${esc(p.name)}</a></h3><div class="price">${from}${money(p.price_cents)}</div>
     ${isLocked(p) ? `<div class="drop-tag">🔒 Drops ${esc(dropLabel(p.drop_at))}</div><div class="countdown" data-countdown="${esc(p.drop_at)}"></div><button class="btn" disabled>Coming soon</button>` : `
-    <div class="stock">${p.stock === null ? "Made to order" : soldOut ? "Sold out" : `${p.stock} available`}</div>
+    <div class="stock">${p.digital ? "📄 Digital file (PDF)" : p.stock === null ? "Made to order" : soldOut ? "Sold out" : `${p.stock} available`}</div>
     ${soldOut ? `<button class="btn" disabled>Sold out</button>`
       : hasOptions ? `<a class="btn" href="product.html?id=${p.id}">Choose options</a>`
       : `<button class="btn" data-add="${p.id}">Add to cart</button>`}`}

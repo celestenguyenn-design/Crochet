@@ -286,8 +286,8 @@ export const cart = {
       if (v) price += Number(v.price_delta_cents) || 0;
     }
     const label = Object.values(options).join(", ");
-    if (ex) ex.quantity += qty;
-    else items.push({ key, product_id: p.id, name: p.name + (label ? ` (${label})` : ""), options, price_cents: price, image_url: p.image_url, quantity: qty });
+    if (ex) ex.quantity = p.digital ? 1 : ex.quantity + qty;
+    else items.push({ key, product_id: p.id, name: p.name + (label ? ` (${label})` : ""), options, price_cents: price, image_url: p.image_url, quantity: p.digital ? 1 : qty, digital: !!p.digital });
     cart.save(items);
   },
   countOf(productId) { return cart.get().filter((i) => i.product_id === productId).reduce((n, i) => n + i.quantity, 0); },

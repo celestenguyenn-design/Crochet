@@ -247,6 +247,10 @@ async function loadOrders() {
     const o = orders.find((x) => x.id === card.dataset.id);
     card.querySelector("[data-act=deposit]")?.addEventListener("click", () => save(o.id, { payment_status: "deposit_paid", amount_paid_cents: o.deposit_cents, status: o.status === "new" ? "in_progress" : o.status }));
     card.querySelector("[data-act=full]")?.addEventListener("click", () => save(o.id, { payment_status: "paid", amount_paid_cents: o.total_cents }));
+    card.querySelector("[data-act=orderlink]")?.addEventListener("click", async () => {
+      await navigator.clipboard.writeText((settings.site_url || location.href.replace(/[^/]*$/, "")).replace(/\/?$/, "/") + "order.html?n=" + o.order_number);
+      toast("Copied! They enter their email there to download.");
+    });
     card.querySelector("[data-act=copy]")?.addEventListener("click", async () => { await navigator.clipboard.writeText(addrText(o.ship_address)); toast("Address copied — paste it into Pirate Ship"); });
     card.querySelector("[data-act=save]").addEventListener("click", () => {
       const v = (n) => card.querySelector(`[name=${n}]`)?.value;
@@ -268,7 +272,7 @@ function orderCard(o) {
     <div class="order-top">
       <div><h3 style="margin:0">#${o.order_number} · ${esc(o.customer_name)}</h3>
         <div class="muted" style="font-size:.9rem">${fmtDate(o.created_at)}</div></div>
-      <div style="text-align:right"><span class="pill">${ship ? "📦 Ship" : "📍 Pickup"}</span> <span class="pill">${STATUS_LABEL[o.status]}</span></div>
+      <div style="text-align:right"><span class="pill">${o.fulfillment === "digital" ? "📄 Digital" : ship ? "📦 Ship" : "📍 Pickup"}</span> <span class="pill">${STATUS_LABEL[o.status]}</span></div>
     </div>
     ${badge}
     <div class="order-grid">
@@ -308,6 +312,8 @@ function orderCard(o) {
       </div>
       <label>Private notes</label><input name="admin_notes" value="${esc(o.admin_notes)}">
     </details>
+    ${o.fulfillment === "digital" || o.order_items.some((i) => /\(PDF\)/.test(i.name)) ? `<p class="muted" style="font-size:.9rem">📄 Has a pattern: once you mark it <b>Paid in full</b>, the customer can download it from their order page${o.payment_status === "paid" ? " — you can send them the link:" : "."}
+      ${o.payment_status === "paid" ? `<button class="btn small secondary" data-act="orderlink">📋 Copy their order-page link</button>` : ""}</p>` : ""}
     <div class="inline"><button class="btn small" data-act="save">Save</button>
       <a class="btn small secondary" href="mailto:${encodeURIComponent(o.email)}?subject=${encodeURIComponent(`Your order #${o.order_number}`)}">Email customer</a></div>
   </div>`;
@@ -472,7 +478,7 @@ async function loadProducts() {
     <div class="inline"><div><input id="new-cat" placeholder="New category name"></div><button class="btn small" id="add-cat">+ Add category</button></div></details>
     <p><button class="btn" id="new-product">+ Add product</button></p><div class="list">${data.map((p) => `<div class="card head" style="align-items:center">
     <div style="display:flex; gap:14px; align-items:center">${safeUrl(p.image_url) ? `<img class="thumb" src="${esc(p.image_url)}">` : `<div class="thumb"></div>`}
-    <div><b>${esc(p.name)}</b> ${p.featured ? `<span class="pill">★ Best seller</span>` : ""} ${p.active ? "" : `<span class="pill">Hidden</span>`}<br><span class="muted">${money(p.price_cents)} · ${p.stock === null ? "Made to order" : p.stock + " in stock"}${catName(p.category_id) ? " · " + esc(catName(p.category_id)) : ""}${(p.options || []).length ? " · has options" : ""}${p.drop_at && new Date(p.drop_at) > new Date() ? " · ⏰ drops " + new Date(p.drop_at).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : ""}</span></div></div>
+    <div><b>${esc(p.name)}</b> ${p.featured ? `<span class="pill">★ Best seller</span>` : ""} ${p.active ? "" : `<span class="pill">Hidden</span>`}<br><span class="muted">${money(p.price_cents)} · ${p.stock === null ? "Made to order" : p.stock + " in stock"}${catName(p.category_id) ? " · " + esc(catName(p.category_id)) : ""}${(p.options || []).length ? " · has options" : ""}${p.digital ? (p.file_path ? " · 📄 PDF ready" : " · ⚠️ PDF not uploaded") : ""}${p.drop_at && new Date(p.drop_at) > new Date() ? " · ⏰ drops " + new Date(p.drop_at).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : ""}</span></div></div>
     <span><button class="btn small secondary" data-share="${p.id}" title="Copy a link that shows a photo preview in Messenger, Facebook, iMessage…">🔗 Share link</button> <button class="btn small secondary" data-edit="${p.id}">Edit</button></span></div>`).join("") || `<p class="muted">No products yet. Add your first one!</p>`}</div>`;
   el.querySelectorAll("[data-share]").forEach((b) => b.onclick = async () => {
     await navigator.clipboard.writeText((settings.site_url || "").replace(/\/?$/, "/") + "p/" + b.dataset.share + ".html");
@@ -510,6 +516,13 @@ function productDialog(p) {
     <label>Description</label><textarea name="description">${esc(p.description)}</textarea>
     <div class="row"><div><label>Price ($) *</label><input name="price" type="number" step="0.01" min="0" required value="${p.price_cents != null ? (p.price_cents / 100).toFixed(2) : ""}"></div>
     <div><label>Quantity in stock</label><input name="stock" type="number" min="0" value="${p.stock ?? ""}" placeholder="Blank = made to order"></div></div>
+    <div class="card" style="box-shadow:none;border:1px dashed var(--line);margin-top:14px;padding:12px">
+      <label style="font-weight:700;margin-top:0"><input type="checkbox" name="digital" ${p.digital ? "checked" : ""}>📄 Digital PDF pattern (not a physical item)</label>
+      <p class="muted" style="margin:4px 0 8px;font-size:.9rem">Customers pay in full, no pickup/shipping. Their download unlocks on their order page when you mark the order <b>Paid in full</b>.</p>
+      <div id="pdf-status" class="muted" style="font-size:.9rem">${p.file_path ? "✅ PDF uploaded" : "No PDF uploaded yet"}</div>
+      <input type="file" accept="application/pdf,.pdf,.zip" id="pdf-upload" style="margin-top:6px">
+      <input type="hidden" name="file_path" value="${esc(p.file_path)}">
+    </div>
     <label>⏰ Drop date & time (optional)</label><input name="drop_at" type="datetime-local" value="${p.drop_at ? new Date(new Date(p.drop_at).getTime() - new Date().getTimezoneOffset() * 6e4).toISOString().slice(0, 16) : ""}">
     <p class="muted" style="margin:4px 0 0; font-size:.9rem">Leave blank to sell now. If set, the item shows a countdown and can't be bought until then.</p>
     <label>Category</label><select name="category_id"><option value="">— None —</option>${categories.map((c) => `<option value="${c.id}" ${c.id === p.category_id ? "selected" : ""}>${esc(c.name)}</option>`).join("")}</select>
@@ -528,6 +541,17 @@ function productDialog(p) {
     <div class="inline"><button class="btn" value="save">Save</button><button class="btn secondary" value="cancel" formnovalidate>Cancel</button>
     ${p.id ? `<button class="btn danger" value="delete" formnovalidate style="margin-left:auto">Delete</button>` : ""}</div></form>`;
   wireUploads(d);
+  // pattern PDF (private storage)
+  d.querySelector("#pdf-upload").onchange = async (e) => {
+    const file = e.target.files[0]; if (!file) return;
+    toast("Uploading PDF…");
+    const path = `${Date.now()}-${(file.name || "pattern.pdf").toLowerCase().replace(/[^a-z0-9.]+/g, "-").slice(-60)}`;
+    const { error } = await sb.storage.from("pattern-files").upload(path, file, { contentType: file.type || "application/pdf" });
+    if (error) return toast("Upload failed: " + error.message);
+    d.querySelector("[name=file_path]").value = path;
+    d.querySelector("#pdf-status").textContent = `✅ ${file.name} uploaded — click Save`;
+    d.querySelector("[name=digital]").checked = true;
+  };
   // extra photos
   let extras = [...(p.images || [])];
   const paintExtras = () => {
@@ -569,7 +593,9 @@ function productDialog(p) {
       stock: f.get("stock") === "" ? null : parseInt(f.get("stock")), image_url: f.get("image_url"),
       sort_order: parseInt(f.get("sort_order")) || 0, active: f.get("active") === "on", featured: f.get("featured") === "on",
       category_id: f.get("category_id") || null, images: extras, options: readOptions(),
-      drop_at: f.get("drop_at") ? new Date(f.get("drop_at")).toISOString() : null };
+      drop_at: f.get("drop_at") ? new Date(f.get("drop_at")).toISOString() : null,
+      digital: f.get("digital") === "on", file_path: f.get("file_path") || "" };
+    if (row.digital) row.stock = null;
     const { error } = p.id ? await sb.from("products").update(row).eq("id", p.id) : await sb.from("products").insert(row);
     toast(error ? error.message : "Saved"); loadProducts();
   };

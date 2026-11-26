@@ -57,9 +57,9 @@ Deno.serve(async (req) => {
         ${tr("Total", money(o.total_cents), true)}
         ${o.deposit_cents && rest > 0 ? tr(`Deposit due now`, money(o.deposit_cents)) + tr(ship ? "Rest, before shipping" : "Rest, at pickup", money(rest)) : ""}</table>`;
       const a = o.ship_address;
-      const addr = ship && a ? `<p><b>📦 Ship to:</b><br>${[a.name, a.line1, a.line2, `${a.city}, ${a.state} ${a.zip}`].filter(Boolean).map(esc).join("<br>")}</p>` : `<p><b>📍 Local pickup</b></p>`;
+      const addr = ship && a ? `<p><b>📦 Ship to:</b><br>${[a.name, a.line1, a.line2, `${a.city}, ${a.state} ${a.zip}`].filter(Boolean).map(esc).join("<br>")}</p>` : o.fulfillment === "digital" ? `<p><b>📄 Digital pattern</b> — mark the order <b>Paid in full</b> to unlock their download.</p>` : `<p><b>📍 Local pickup</b></p>`;
 
-      await send(OWNER_EMAIL, `🧶 New order #${o.order_number} – ${money(o.total_cents)}${ship ? " (ship)" : " (pickup)"}`, wrap(s, `
+      await send(OWNER_EMAIL, `🧶 New order #${o.order_number} – ${money(o.total_cents)}${ship ? " (ship)" : o.fulfillment === "digital" ? " (pattern)" : " (pickup)"}`, wrap(s, `
         <p><b>${esc(o.customer_name)}</b> placed order <b>#${o.order_number}</b>.</p>
         ${moneyTable}
         <p style="background:#fde0e0;color:#a32020;padding:8px 12px;border-radius:10px;font-weight:bold">Nothing paid yet — ${o.deposit_cents && rest > 0 ? `waiting for ${money(o.deposit_cents)} deposit` : `waiting for ${money(o.total_cents)}`} by ${pm}</p>
@@ -78,7 +78,7 @@ Deno.serve(async (req) => {
           ${moneyTable}
           ${o.deposit_cents ? `<p style="background:#fff3cd;padding:8px 12px;border-radius:10px"><b>Your order isn't confirmed until your ${what} is received.</b></p>` : ""}
           <p>${pay}</p>
-          ${ship ? addr : `<p><b>Pickup:</b> ${esc(s.pickup_location)}</p>${s.pickup_instructions ? `<p>${esc(s.pickup_instructions)}</p>` : ""}`}
+          ${o.fulfillment === "digital" ? `<p>📄 Your pattern download will appear on your order page (order #${o.order_number}) as soon as your payment is confirmed.</p>` : ship ? addr : `<p><b>Pickup:</b> ${esc(s.pickup_location)}</p>${s.pickup_instructions ? `<p>${esc(s.pickup_instructions)}</p>` : ""}`}
           ${s.order_note ? `<p>⏳ ${esc(s.order_note)}</p>` : ""}
           <p>Just reply to this email if you have questions!</p>`), OWNER_EMAIL);
       }

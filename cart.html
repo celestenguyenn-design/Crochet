@@ -67,7 +67,8 @@ const fOpts = [];
 if (s.allow_pickup !== false) fOpts.push(["pickup", "📍 Local pickup", "Free"]);
 if (s.allow_shipping) fOpts.push(["shipping", "📦 Shipping", s.free_shipping_over_cents != null ? `${money(s.shipping_flat_cents)} · free over ${money(s.free_shipping_over_cents)}` : money(s.shipping_flat_cents)]);
 $("fulfill-options").innerHTML = fOpts.map(([v, l, d], i) => `<label class="pay-option"><input type="radio" name="fulfill" value="${v}" ${i === 0 ? "checked" : ""} required><span><b>${l}</b><br><span class="muted">${d}</span></span></label>`).join("");
-const fulfill = () => document.querySelector("[name=fulfill]:checked")?.value || "pickup";
+const allDigital = () => { const c = cart.get(); return c.length > 0 && c.every((i) => i.digital); };
+const fulfill = () => allDigital() ? "digital" : (document.querySelector("[name=fulfill]:checked")?.value || "pickup");
 
 // ----- Payment options -----
 function paintPay() {
@@ -81,13 +82,15 @@ function paintPay() {
     ? opts.map(([v, l, d], i) => `<label class="pay-option"><input type="radio" name="pay" value="${v}" ${(cur ? cur === v : i === 0) ? "checked" : ""} required><span><b>${l}</b><br><span class="muted">${d}</span></span></label>`).join("")
     : `<p class="error">Payment options haven't been set up yet.</p>`;
   if (!document.querySelector("[name=pay]:checked")) document.querySelector("[name=pay]")?.click();
-  $("pay-label").textContent = depositPct ? `How will you pay your ${depositPct === 100 ? "payment" : depositPct + "% deposit"}?` : "How will you pay?";
+  $("pay-label").textContent = allDigital() ? "How will you pay?" : depositPct ? `How will you pay your ${depositPct === 100 ? "payment" : depositPct + "% deposit"}?` : "How will you pay?";
 }
 function onFulfill() {
+  const dig = allDigital();
+  $("fulfill-options").hidden = dig; $("fulfill-options").previousElementSibling.hidden = dig;
   const ship = fulfill() === "shipping";
   $("address-box").hidden = !ship;
   ["line1", "city", "state", "zip"].forEach((n) => (document.querySelector(`[name=${n}]`).required = ship));
-  $("pickup-info").textContent = ship ? "" : (s.pickup_location || "");
+  $("pickup-info").textContent = dig ? "📩 Digital download — nothing to pick up or ship. Your PDF unlocks on your order page as soon as your payment is confirmed." : ship ? "" : (s.pickup_location || "");
   paintPay(); render();
 }
 $("fulfill-options").addEventListener("change", onFulfill);
@@ -123,19 +126,22 @@ function render() {
   $("items").innerHTML = items.map((i, idx) => `<div class="cart-item">
     ${safeUrl(i.image_url) ? `<img src="${esc(i.image_url)}" alt="">` : `<div class="ph"></div>`}
     <div><b>${esc(i.name)}</b><br><span class="muted">${money(i.price_cents)} each</span></div>
-    <input class="qty" type="number" min="1" max="100" value="${i.quantity}" data-idx="${idx}">
+    ${i.digital ? `<span class="muted" style="font-size:.85rem">📄 PDF</span>` : `<input class="qty" type="number" min="1" max="100" value="${i.quantity}" data-idx="${idx}">`}
     <button class="btn small secondary" data-remove="${idx}" type="button">Remove</button></div>`).join("");
   const sub = items.reduce((t, i) => t + i.price_cents * i.quantity, 0), off = discountFor(sub);
   const ship = fulfill() === "shipping" ? shipFee(sub - off) : 0, total = sub - off + ship;
-  const dep = Math.ceil(total * depositPct / 100);
+  const dig = allDigital();
+  const dep = dig ? total : Math.ceil(total * depositPct / 100);
   $("summary").style.display = "";
   $("summary").innerHTML = line("Subtotal", money(sub))
     + (off ? line(`Discount (${esc(discount.code)})`, "−" + money(off), "good") : "")
     + (fulfill() === "shipping" ? line("Shipping", ship ? money(ship) : "Free") : "")
     + line("Total", money(total), "big")
-    + (depositPct > 0 && depositPct < 100 ? `<div class="deposit-box">${line(`Due now (${depositPct}% deposit)`, money(dep), "big")}${line(fulfill() === "shipping" ? "Rest, due before shipping" : "Rest, due at pickup", money(total - dep))}</div>` : "")
+    + (!dig && depositPct > 0 && depositPct < 100 ? `<div class="deposit-box">${line(`Due now (${depositPct}% deposit)`, money(dep), "big")}${line(fulfill() === "shipping" ? "Rest, due before shipping" : "Rest, due at pickup", money(total - dep))}</div>` : "")
     + `<p class="muted" style="margin:8px 0 0; font-size:.85rem">No sales tax.</p>`;
-  if (depositPct > 0) $("agree-text").innerHTML = depositPct < 100
+  $("agree-box").hidden = !(depositPct > 0 || dig); $("agree").required = depositPct > 0 || dig;
+  if (dig) $("agree-text").innerHTML = `I understand this is a <b>digital PDF pattern</b>, not a finished item, and my download unlocks once my <b>${money(total)}</b> payment is confirmed.`;
+  else if (depositPct > 0) $("agree-text").innerHTML = depositPct < 100
     ? `I understand my order <b>isn't confirmed or started</b> until my <b>${money(dep)} deposit</b> is received.`
     : `I understand my order <b>isn't confirmed or started</b> until my payment is received.`;
   if (discount && !off && discount.min_subtotal_cents) $("code-msg").textContent = `Add ${money(discount.min_subtotal_cents - sub)} more to use ${discount.code}.`;
@@ -156,7 +162,7 @@ $("form").addEventListener("submit", async (e) => {
   const f = new FormData(e.target);
   const btn = $("submit"), err = $("err");
   btn.disabled = true; err.textContent = "";
-  const ship = fulfill() === "shipping";
+  const ship = fulfill() === "shipping", hadDigital = cart.get().some((i) => i.digital);
   const { data, error } = await sb.rpc("place_order", {
     p_name: f.get("name"), p_email: f.get("email"), p_phone: f.get("phone"),
     p_payment_method: f.get("pay"), p_notes: f.get("notes"),
@@ -185,10 +191,11 @@ $("form").addEventListener("submit", async (e) => {
   const done = $("done-view");
   done.style.display = "";
   done.innerHTML = `<h1>Thank you! 🧶</h1><div class="notice"><h2>Order #${n} is reserved</h2>
-    ${data.deposit_cents ? `<p class="deposit-alert">⚠️ Your order isn't confirmed until your ${what} is received. Please send it within <b>48 hours</b>.</p>` : ""}
+    ${data.deposit_cents ? `<p class="deposit-alert">⚠️ ${data.fulfillment === "digital" ? "Your download unlocks once your payment is received." : `Your order isn't confirmed until your ${what} is received.`} Please send it within <b>48 hours</b>.</p>` : ""}
     ${payMsg}
     ${rest > 0 && data.deposit_cents ? `<p>The remaining <b>${money(rest)}</b> is due ${data.fulfillment === "shipping" ? "before your order ships" : "at pickup"}.</p>` : ""}
-    ${data.fulfillment === "shipping" ? `<p><b>Shipping:</b> I'll email you tracking when it ships.</p>`
+    ${hadDigital ? `<p class="digital-box">📄 <b>Your pattern download</b> will appear on your <a href="order.html?n=${n}">order page</a> as soon as I confirm your payment. Bookmark it!</p>` : ""}
+    ${data.fulfillment === "digital" ? "" : data.fulfillment === "shipping" ? `<p><b>Shipping:</b> I'll email you tracking when it ships.</p>`
       : `<p><b>Pickup:</b> ${esc(s.pickup_location)}</p>${s.pickup_instructions ? `<p style="white-space:pre-wrap">${esc(s.pickup_instructions)}</p>` : ""}`}
     ${data.discount_cents ? `<p>You saved ${money(data.discount_cents)}! 🎉</p>` : ""}
     <p class="muted">Save your order number. <a href="order.html?n=${n}">Check your order status</a> anytime.</p></div>`;
