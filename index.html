@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title></title>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<header id="site-header"></header>
+<main class="container">
+  <section id="hero" class="hero"><h1>&nbsp;</h1></section>
+  <h2>Shop</h2>
+  <div id="products" class="grid"><p class="muted">Loading…</p></div>
+  <section id="about" class="card" style="margin-top:48px; display:none"></section>
+</main>
+<script type="module">
+import { sb, getSettings, renderChrome, esc, money, safeUrl, cart, toast } from "./assets/common.js";
+const s = await getSettings();
+renderChrome(s, "shop");
+
+const hero = document.getElementById("hero");
+if (safeUrl(s.hero_image_url)) {
+  hero.classList.add("has-img");
+  hero.style.backgroundImage = `linear-gradient(rgba(0,0,0,.25),rgba(0,0,0,.25)), url("${encodeURI(s.hero_image_url)}")`;
+}
+hero.innerHTML = `<h1>${esc(s.hero_title)}</h1><p>${esc(s.hero_subtitle)}</p>
+  <a class="btn" href="#products">Shop now</a> <a class="btn secondary" href="custom.html" style="background:var(--card)">Request a custom piece</a>`;
+
+if (s.about_text) {
+  const a = document.getElementById("about");
+  a.style.display = "";
+  a.innerHTML = `<h2>About me</h2><p style="white-space:pre-wrap">${esc(s.about_text)}</p>`;
+}
+
+const { data: products, error } = await sb.from("products").select("*").order("sort_order").order("created_at", { ascending: false });
+const box = document.getElementById("products");
+if (error) box.innerHTML = `<p class="error">Couldn't load products.</p>`;
+else if (!products.length) box.innerHTML = `<p class="muted">New items coming soon!</p>`;
+else {
+  box.innerHTML = products.map((p) => {
+    const soldOut = p.stock === 0;
+    const img = safeUrl(p.image_url) ? `<img class="img" src="${esc(p.image_url)}" alt="${esc(p.name)}" loading="lazy">` : `<div class="img"></div>`;
+    const stock = p.stock === null ? "Made to order" : soldOut ? "Sold out" : `${p.stock} available`;
+    return `<div class="product">${img}<div class="body">
+      <h3>${esc(p.name)}</h3><div class="price">${money(p.price_cents)}</div>
+      <div class="desc">${esc(p.description)}</div><div class="stock">${stock}</div>
+      <button class="btn" data-id="${p.id}" ${soldOut ? "disabled" : ""}>${soldOut ? "Sold out" : "Add to cart"}</button>
+    </div></div>`;
+  }).join("");
+  box.addEventListener("click", (e) => {
+    const id = e.target.dataset?.id; if (!id) return;
+    const p = products.find((x) => x.id === id);
+    const inCart = cart.get().find((i) => i.product_id === id)?.quantity || 0;
+    if (p.stock !== null && inCart >= p.stock) return toast(`Only ${p.stock} available`);
+    cart.add(p); toast(`Added ${p.name} to cart`);
+  });
+}
+</script>
+<footer id="site-footer"></footer>
+</body>
+</html>

@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Admin</title>
+<link rel="stylesheet" href="assets/style.css">
+<style>
+  .tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 24px; }
+  .tabs button { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 8px 14px; font: inherit; font-weight: 700; cursor: pointer; color: var(--text); }
+  .tabs button.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+  .list > .card { margin-bottom: 14px; }
+  .head { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; align-items: baseline; }
+  .pill { font-size: .8rem; font-weight: 700; padding: 2px 10px; border-radius: 99px; background: var(--line); }
+  .pill.paid { background: #c8ecd0; color: #1d6b31; } .pill.unpaid { background: #fde2c8; color: #8a4b10; }
+  .inline { display: flex; gap: 10px; flex-wrap: wrap; align-items: end; margin-top: 10px; }
+  .inline > div { flex: 1; min-width: 150px; }
+  .filters { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+  .filters select { width: auto; }
+  .thumb { width: 56px; height: 56px; object-fit: cover; border-radius: 8px; background: var(--line); }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 14px; margin-bottom: 20px; }
+  .stats .card b { font-size: 1.5rem; display: block; }
+  .preview-swatch { display: flex; gap: 8px; margin-top: 12px; }
+  .preview-swatch span { flex: 1; height: 36px; border-radius: 8px; border: 1px solid var(--line); }
+  dialog { border: 0; border-radius: var(--radius); padding: 0; width: min(760px, 95vw); background: var(--bg); color: var(--text); }
+  dialog::backdrop { background: rgba(0,0,0,.4); }
+  dialog form { padding: 24px; }
+</style>
+</head>
+<body>
+<header id="site-header"><div class="container header-inner"><span class="logo-text">Shop Admin</span><nav><a href="index.html" target="_blank">View site ↗</a><a href="#" id="logout" style="display:none">Log out</a></nav></div></header>
+<main class="container">
+  <form id="login" class="card article" style="max-width:420px; display:none">
+    <h2>Admin log in</h2>
+    <label>Email</label><input name="email" type="email" required>
+    <label>Password</label><input name="password" type="password" required>
+    <p class="error" id="login-err"></p>
+    <button class="btn">Log in</button>
+  </form>
+  <div id="app" style="display:none">
+    <div class="tabs" id="tabs">
+      <button data-tab="orders" class="active">Orders</button>
+      <button data-tab="requests">Custom Requests</button>
+      <button data-tab="products">Products</button>
+      <button data-tab="patterns">Patterns</button>
+      <button data-tab="appearance">Appearance</button>
+      <button data-tab="settings">Payment &amp; Pickup</button>
+    </div>
+    <section id="tab-orders"></section>
+    <section id="tab-requests" hidden></section>
+    <section id="tab-products" hidden></section>
+    <section id="tab-patterns" hidden></section>
+    <section id="tab-appearance" hidden></section>
+    <section id="tab-settings" hidden></section>
+  </div>
+</main>
+<dialog id="dlg"></dialog>
+
+<script type="module">
+import { sb, getSettings, applyTheme, esc, money, safeUrl, toast, FONTS } from "./assets/common.js";
+
+let settings = await getSettings();
+const $ = (id) => document.getElementById(id);
+const toCents = (v) => Math.round(parseFloat(v || 0) * 100);
+const fmtDate = (d) => new Date(d).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+
+// ---------- Auth ----------
+async function boot() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) { $("login").style.display = ""; $("app").style.display = "none"; $("logout").style.display = "none"; return; }
+  const { data: isAdmin } = await sb.rpc("is_admin");
+  if (!isAdmin) {
+    $("login").style.display = ""; $("login-err").textContent = "This account isn't an admin yet.";
+    await sb.auth.signOut(); return;
+  }
+  $("login").style.display = "none"; $("app").style.display = ""; $("logout").style.display = "";
+  showTab("orders");
+}
+$("login").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const f = new FormData(e.target);
+  const { error } = await sb.auth.signInWithPassword({ email: f.get("email"), password: f.get("password") });
+  if (error) $("login-err").textContent = error.message; else boot();
+});
+$("logout").addEventListener("click", async (e) => { e.preventDefault(); await sb.auth.signOut(); boot(); });
+
+// ---------- Tabs ----------
+const loaders = { orders: loadOrders, requests: loadRequests, products: loadProducts, patterns: loadPatterns, appearance: loadAppearance, settings: loadSettings };
+function showTab(name) {
+  document.querySelectorAll("#tabs button").forEach((b) => b.classList.toggle("active", b.dataset.tab === name));
+  document.querySelectorAll("#app > section").forEach((s) => (s.hidden = s.id !== "tab-" + name));
+  loaders[name]();
+}
+$("tabs").addEventListener("click", (e) => e.target.dataset.tab && showTab(e.target.dataset.tab));
+
+// ---------- Image upload ----------
+async function uploadImage(file) {
+  const ext = (file.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "");
+  const path = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+  const { error } = await sb.storage.from("images").upload(path, file, { contentType: file.type });
+  if (error) { toast("Upload failed: " + error.message); return null; }
+  return sb.storage.from("images").getPublicUrl(path).data.publicUrl;
+}
+// Wire up: <input type=file data-target="fieldName"> fills the text input with that name.
+function wireUploads(root) {
+  root.querySelectorAll("input[type=file][data-target]").forEach((inp) => inp.addEventListener("change", async () => {
+    if (!inp.files[0]) return;
+    toast("Uploading…");
+    const url = await uploadImage(inp.files[0]);
+    if (url) { root.querySelector(`[name="${inp.dataset.target}"]`).value = url; toast("Uploaded!"); }
+  }));
+}
+const imgField = (name, label, value) => `<label>${label}</label>
+  <input name="${name}" value="${esc(value)}" placeholder="Upload a photo or paste an image link">
+  <input type="file" accept="image/*" data-target="${name}" style="margin-top:6px">`;
+
+// ---------- Orders ----------
+const ORDER_STATUSES = ["new", "in_progress", "ready", "picked_up", "cancelled"];
+const label = (s) => s.replace("_", " ").replace(/^\w/, (c) => c.toUpperCase());
+let orderFilter = "open";
+async function loadOrders() {
+  const el = $("tab-orders");
+  const { data: orders, error } = await sb.from("orders").select("*, order_items(*)").order("created_at", { ascending: false }).limit(500);
+  if (error) { el.innerHTML = `<p class="error">${esc(error.message)}</p>`; return; }
+  const paid = orders.filter((o) => o.payment_status === "paid");
+  const open = orders.filter((o) => !["picked_up", "cancelled"].includes(o.status));
+  const shown = orders.filter((o) => orderFilter === "all" ? true : orderFilter === "open" ? !["picked_up", "cancelled"].includes(o.status) : orderFilter === "unpaid" ? o.payment_status === "unpaid" && o.status !== "cancelled" : o.status === orderFilter);
+  el.innerHTML = `
+    <div class="stats">
+      <div class="card"><b>${open.length}</b>Open orders</div>
+      <div class="card"><b>${orders.filter((o) => o.payment_status === "unpaid" && o.status !== "cancelled").length}</b>Awaiting payment</div>
+      <div class="card"><b>${money(paid.reduce((t, o) => t + o.total_cents, 0))}</b>Total paid</div>
+    </div>
+    <div class="filters"><select id="of">
+      ${[["open", "Open orders"], ["unpaid", "Unpaid"], ...ORDER_STATUSES.map((s) => [s, label(s)]), ["all", "All orders"]].map(([v, l]) => `<option value="${v}" ${v === orderFilter ? "selected" : ""}>${l}</option>`).join("")}
+    </select></div>
+    <div class="list">${shown.length ? shown.map(orderCard).join("") : `<p class="muted">No orders here.</p>`}</div>`;
+  $("of").onchange = (e) => { orderFilter = e.target.value; loadOrders(); };
+  el.querySelectorAll("[data-save-order]").forEach((b) => b.onclick = async () => {
+    const card = b.closest(".card"), id = b.dataset.saveOrder;
+    const { error } = await sb.from("orders").update({
+      status: card.querySelector("[name=status]").value,
+      payment_status: card.querySelector("[name=payment_status]").value,
+      admin_notes: card.querySelector("[name=admin_notes]").value,
+    }).eq("id", id);
+    toast(error ? error.message : "Saved"); if (!error) loadOrders();
+  });
+}
+function orderCard(o) {
+  const pm = { zelle: "Zelle", venmo: "Venmo", pickup: "Pay at pickup" }[o.payment_method];
+  return `<div class="card">
+    <div class="head"><h3>#${o.order_number} · ${esc(o.customer_name)}</h3>
+      <span><span class="pill ${o.payment_status}">${label(o.payment_status)}</span> <span class="pill">${label(o.status)}</span></span></div>
+    <div class="muted">${fmtDate(o.created_at)} · ${esc(o.email)} ${o.phone ? "· " + esc(o.phone) : ""} · ${pm}</div>
+    <ul>${o.order_items.map((i) => `<li>${i.quantity} × ${esc(i.name)} (${money(i.price_cents)})</li>`).join("")}</ul>
+    <b>Total: ${money(o.total_cents)}</b>
+    ${o.customer_notes ? `<p><i>Customer note:</i> ${esc(o.customer_notes)}</p>` : ""}
+    <div class="inline">
+      <div><label>Order status</label><select name="status">${ORDER_STATUSES.map((s) => `<option value="${s}" ${s === o.status ? "selected" : ""}>${label(s)}</option>`).join("")}</select></div>
+      <div><label>Payment</label><select name="payment_status">${["unpaid", "paid", "refunded"].map((s) => `<option value="${s}" ${s === o.payment_status ? "selected" : ""}>${label(s)}</option>`).join("")}</select></div>
+    </div>
+    <label>Private notes</label><input name="admin_notes" value="${esc(o.admin_notes)}">
+    <div class="inline"><button class="btn small" data-save-order="${o.id}">Save</button>
+      <a class="btn small secondary" href="mailto:${encodeURIComponent(o.email)}?subject=${encodeURIComponent(`Your order #${o.order_number}`)}">Email customer</a></div>
+  </div>`;
+}
+
+// ---------- Custom requests ----------
+const REQ_STATUSES = ["new", "quoted", "accepted", "in_progress", "done", "declined"];
+async function loadRequests() {
+  const el = $("tab-requests");
+  const { data, error } = await sb.from("custom_requests").select("*").order("created_at", { ascending: false });
+  if (error) { el.innerHTML = `<p class="error">${esc(error.message)}</p>`; return; }
+  el.innerHTML = `<div class="list">${data.length ? data.map((r) => `<div class="card">
+    <div class="head"><h3>${esc(r.name)}</h3><span class="pill">${label(r.status)}</span></div>
+    <div class="muted">${fmtDate(r.created_at)} · ${esc(r.email)} ${r.phone ? "· " + esc(r.phone) : ""}</div>
+    <p style="white-space:pre-wrap">${esc(r.description)}</p>
+    <p class="muted">${[r.colors && "Colors: " + esc(r.colors), r.size && "Size: " + esc(r.size), r.budget && "Budget: " + esc(r.budget), r.needed_by && "Needed by: " + esc(r.needed_by)].filter(Boolean).join(" · ")}</p>
+    <div class="inline">
+      <div><label>Status</label><select name="status">${REQ_STATUSES.map((s) => `<option value="${s}" ${s === r.status ? "selected" : ""}>${label(s)}</option>`).join("")}</select></div>
+      <div><label>Quote ($)</label><input name="quote" type="number" step="0.01" min="0" value="${r.quote_cents != null ? (r.quote_cents / 100).toFixed(2) : ""}"></div>
+    </div>
+    <label>Private notes</label><input name="admin_notes" value="${esc(r.admin_notes)}">
+    <div class="inline"><button class="btn small" data-save="${r.id}">Save</button>
+      <a class="btn small secondary" href="mailto:${encodeURIComponent(r.email)}?subject=${encodeURIComponent("Your custom crochet request")}">Email customer</a>
+      <button class="btn small danger" data-del="${r.id}">Delete</button></div>
+  </div>`).join("") : `<p class="muted">No custom requests yet.</p>`}</div>`;
+  el.querySelectorAll("[data-save]").forEach((b) => b.onclick = async () => {
+    const c = b.closest(".card"), q = c.querySelector("[name=quote]").value;
+    const { error } = await sb.from("custom_requests").update({ status: c.querySelector("[name=status]").value, quote_cents: q === "" ? null : toCents(q), admin_notes: c.querySelector("[name=admin_notes]").value }).eq("id", b.dataset.save);
+    toast(error ? error.message : "Saved"); loadRequests();
+  });
+  el.querySelectorAll("[data-del]").forEach((b) => b.onclick = async () => {
+    if (!confirm("Delete this request?")) return;
+    await sb.from("custom_requests").delete().eq("id", b.dataset.del); loadRequests();
+  });
+}
+
+// ---------- Products ----------
+async function loadProducts() {
+  const el = $("tab-products");
+  const { data, error } = await sb.from("products").select("*").order("sort_order").order("created_at", { ascending: false });
+  if (error) { el.innerHTML = `<p class="error">${esc(error.message)}</p>`; return; }
+  el.innerHTML = `<p><button class="btn" id="new-product">+ Add product</button></p><div class="list">${data.map((p) => `<div class="card head" style="align-items:center">
+    <div style="display:flex; gap:14px; align-items:center">${safeUrl(p.image_url) ? `<img class="thumb" src="${esc(p.image_url)}">` : `<div class="thumb"></div>`}
+    <div><b>${esc(p.name)}</b> ${p.active ? "" : `<span class="pill">Hidden</span>`}<br><span class="muted">${money(p.price_cents)} · ${p.stock === null ? "Made to order" : p.stock + " in stock"}</span></div></div>
+    <button class="btn small secondary" data-edit="${p.id}">Edit</button></div>`).join("") || `<p class="muted">No products yet. Add your first one!</p>`}</div>`;
+  $("new-product").onclick = () => productDialog({ active: true, sort_order: 0, stock: null });
+  el.querySelectorAll("[data-edit]").forEach((b) => b.onclick = () => productDialog(data.find((p) => p.id === b.dataset.edit)));
+}
+function productDialog(p) {
+  const d = $("dlg");
+  d.innerHTML = `<form method="dialog"><h2>${p.id ? "Edit" : "New"} product</h2>
+    <label>Name *</label><input name="name" required value="${esc(p.name)}">
+    <label>Description</label><textarea name="description">${esc(p.description)}</textarea>
+    <div class="row"><div><label>Price ($) *</label><input name="price" type="number" step="0.01" min="0" required value="${p.price_cents != null ? (p.price_cents / 100).toFixed(2) : ""}"></div>
+    <div><label>Quantity in stock</label><input name="stock" type="number" min="0" value="${p.stock ?? ""}" placeholder="Blank = made to order"></div></div>
+    ${imgField("image_url", "Photo", p.image_url)}
+    <div class="row"><div><label>Display order</label><input name="sort_order" type="number" value="${p.sort_order ?? 0}"></div>
+    <div><label>&nbsp;</label><label style="font-weight:400"><input type="checkbox" name="active" ${p.active ? "checked" : ""}>Show on shop</label></div></div>
+    <div class="inline"><button class="btn" value="save">Save</button><button class="btn secondary" value="cancel" formnovalidate>Cancel</button>
+    ${p.id ? `<button class="btn danger" value="delete" formnovalidate style="margin-left:auto">Delete</button>` : ""}</div></form>`;
+  wireUploads(d);
+  d.returnValue = ""; d.showModal();
+  d.onclose = async () => {
+    const f = new FormData(d.querySelector("form"));
+    if (d.returnValue === "delete") {
+      if (!confirm("Delete this product? (Past orders keep their record.)")) return;
+      const { error } = await sb.from("products").delete().eq("id", p.id); toast(error ? error.message : "Deleted"); return loadProducts();
+    }
+    if (d.returnValue !== "save") return;
+    const row = { name: f.get("name"), description: f.get("description"), price_cents: toCents(f.get("price")),
+      stock: f.get("stock") === "" ? null : parseInt(f.get("stock")), image_url: f.get("image_url"),
+      sort_order: parseInt(f.get("sort_order")) || 0, active: f.get("active") === "on" };
+    const { error } = p.id ? await sb.from("products").update(row).eq("id", p.id) : await sb.from("products").insert(row);
+    toast(error ? error.message : "Saved"); loadProducts();
+  };
+}
+
+// ---------- Patterns ----------
+async function loadPatterns() {
+  const el = $("tab-patterns");
+  const { data, error } = await sb.from("patterns").select("*").order("created_at", { ascending: false });
+  if (error) { el.innerHTML = `<p class="error">${esc(error.message)}</p>`; return; }
+  el.innerHTML = `<p><button class="btn" id="new-pattern">+ New pattern</button></p><div class="list">${data.map((p) => `<div class="card head" style="align-items:center">
+    <div><b>${esc(p.title)}</b> <span class="pill">${p.published ? "Published" : "Draft"}</span><br><span class="muted">${esc(p.difficulty)} · /pattern.html?p=${esc(p.slug)}</span></div>
+    <span>${p.published ? `<a class="btn small secondary" target="_blank" href="pattern.html?p=${encodeURIComponent(p.slug)}">View</a>` : ""} <button class="btn small secondary" data-edit="${p.id}">Edit</button></span></div>`).join("") || `<p class="muted">No patterns yet.</p>`}</div>`;
+  $("new-pattern").onclick = () => patternDialog({ difficulty: "Beginner", published: false });
+  el.querySelectorAll("[data-edit]").forEach((b) => b.onclick = () => patternDialog(data.find((p) => p.id === b.dataset.edit)));
+}
+const slugify = (s) => s.toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 80);
+function patternDialog(p) {
+  const d = $("dlg");
+  d.innerHTML = `<form method="dialog"><h2>${p.id ? "Edit" : "New"} pattern</h2>
+    <label>Title *</label><input name="title" required value="${esc(p.title)}">
+    <label>Short summary (shown in the list and on Google)</label><input name="summary" value="${esc(p.summary)}">
+    <div class="row"><div><label>Difficulty</label><select name="difficulty">${["Beginner", "Easy", "Intermediate", "Advanced"].map((x) => `<option ${x === p.difficulty ? "selected" : ""}>${x}</option>`).join("")}</select></div>
+    <div><label>Web address (slug)</label><input name="slug" value="${esc(p.slug)}" placeholder="auto from title"></div></div>
+    ${imgField("cover_image_url", "Cover photo", p.cover_image_url)}
+    <label>Materials (one per line)</label><textarea name="materials" placeholder="Worsted weight yarn&#10;4.0 mm hook&#10;Stitch marker">${esc(p.materials)}</textarea>
+    <label>Pattern</label>
+    <p class="muted" style="margin:0 0 6px; font-size:.9rem">Tips: start a line with <code>## </code> for a section heading, <code>- </code> for a bullet, <code>**bold**</code> for bold. Upload a step photo below to insert it.</p>
+    <textarea name="body" style="min-height:280px; font-family:monospace">${esc(p.body)}</textarea>
+    <input type="file" accept="image/*" id="body-img" style="margin-top:6px">
+    <label style="font-weight:400"><input type="checkbox" name="published" ${p.published ? "checked" : ""}>Published (visible to everyone)</label>
+    <div class="inline"><button class="btn" value="save">Save</button><button class="btn secondary" value="cancel" formnovalidate>Cancel</button>
+    ${p.id ? `<button class="btn danger" value="delete" formnovalidate style="margin-left:auto">Delete</button>` : ""}</div></form>`;
+  wireUploads(d);
+  d.querySelector("#body-img").onchange = async (e) => {
+    if (!e.target.files[0]) return;
+    toast("Uploading…");
+    const url = await uploadImage(e.target.files[0]);
+    if (url) { const ta = d.querySelector("[name=body]"); ta.value += `\n\n![step photo](${url})\n`; toast("Photo inserted"); }
+  };
+  d.returnValue = ""; d.showModal();
+  d.onclose = async () => {
+    const f = new FormData(d.querySelector("form"));
+    if (d.returnValue === "delete") {
+      if (!confirm("Delete this pattern?")) return;
+      await sb.from("patterns").delete().eq("id", p.id); return loadPatterns();
+    }
+    if (d.returnValue !== "save") return;
+    const published = f.get("published") === "on";
+    const row = { title: f.get("title"), summary: f.get("summary"), difficulty: f.get("difficulty"),
+      slug: slugify(f.get("slug") || f.get("title")) || "pattern-" + Date.now(), cover_image_url: f.get("cover_image_url"),
+      materials: f.get("materials"), body: f.get("body"), published, updated_at: new Date().toISOString(),
+      published_at: published ? (p.published_at || new Date().toISOString()) : p.published_at ?? null };
+    const { error } = p.id ? await sb.from("patterns").update(row).eq("id", p.id) : await sb.from("patterns").insert(row);
+    toast(error ? (error.code === "23505" ? "That web address is already used — pick another slug" : error.message) : "Saved");
+    loadPatterns();
+  };
+}
+
+// ---------- Appearance ----------
+const PRESETS = {
+  "Rose (default)": { color_primary: "#c06c84", color_accent: "#f8b195", color_background: "#fff8f3", color_text: "#3d2c34", color_card: "#ffffff" },
+  "Sage": { color_primary: "#5f7f5a", color_accent: "#c9d8b6", color_background: "#f7f6ef", color_text: "#2f3a2c", color_card: "#ffffff" },
+  "Lavender": { color_primary: "#7b68a6", color_accent: "#d9cdf0", color_background: "#faf8fd", color_text: "#332b45", color_card: "#ffffff" },
+  "Ocean": { color_primary: "#2f6f8f", color_accent: "#a8d5e2", color_background: "#f4f9fb", color_text: "#1f3440", color_card: "#ffffff" },
+  "Honey": { color_primary: "#b7791f", color_accent: "#f6d98b", color_background: "#fffbf0", color_text: "#3f2e13", color_card: "#ffffff" },
+  "Cozy dark": { color_primary: "#e8a0b4", color_accent: "#6b4f5c", color_background: "#1f1a1d", color_text: "#f3e9ee", color_card: "#2a2327" },
+};
+const COLOR_FIELDS = [["color_primary", "Main color (buttons, links)"], ["color_accent", "Accent color"], ["color_background", "Page background"], ["color_card", "Card background"], ["color_text", "Text color"]];
+function loadAppearance() {
+  const s = settings, el = $("tab-appearance");
+  const fontOpts = (sel) => Object.keys(FONTS).map((f) => `<option ${f === sel ? "selected" : ""}>${f}</option>`).join("");
+  el.innerHTML = `<form id="appearance-form" class="card">
+    <h2>Look &amp; feel</h2><p class="muted">Changes preview live on this page. Click Save to publish them to your site.</p>
+    <label>Quick color themes</label><div class="inline" style="margin-top:0">${Object.keys(PRESETS).map((k) => `<button type="button" class="btn small secondary" data-preset="${k}">${k}</button>`).join("")}</div>
+    <div class="row">${COLOR_FIELDS.map(([k, l]) => `<div><label>${l}</label><input type="color" name="${k}" value="${esc(s[k])}"></div>`).join("")}
+      <div><label>Corner roundness: <span id="rv">${s.corner_radius}</span>px</label><input type="range" name="corner_radius" min="0" max="40" value="${s.corner_radius}"></div></div>
+    <div class="row"><div><label>Heading font</label><select name="font_heading">${fontOpts(s.font_heading)}</select></div>
+      <div><label>Body font</label><select name="font_body">${fontOpts(s.font_body)}</select></div></div>
+    <h2 style="margin-top:28px">Branding</h2>
+    <label>Shop name</label><input name="shop_name" value="${esc(s.shop_name)}">
+    ${imgField("logo_url", "Logo (optional — replaces the shop name in the header)", s.logo_url)}
+    <h2 style="margin-top:28px">Home page</h2>
+    <label>Big headline</label><input name="hero_title" value="${esc(s.hero_title)}">
+    <label>Subtitle</label><input name="hero_subtitle" value="${esc(s.hero_subtitle)}">
+    ${imgField("hero_image_url", "Banner photo (optional)", s.hero_image_url)}
+    <label>About me</label><textarea name="about_text">${esc(s.about_text)}</textarea>
+    <div class="row"><div><label>Instagram link</label><input name="instagram_url" value="${esc(s.instagram_url)}" placeholder="https://instagram.com/…"></div>
+      <div><label>TikTok link</label><input name="tiktok_url" value="${esc(s.tiktok_url)}" placeholder="https://tiktok.com/@…"></div></div>
+    <h2 style="margin-top:28px">Ads</h2>
+    <label>Google AdSense publisher ID</label><input name="adsense_client" value="${esc(s.adsense_client)}" placeholder="ca-pub-1234567890123456">
+    <p class="muted" style="font-size:.9rem">Once AdSense approves your site, paste your ID here. Ads then appear on your Free Patterns pages automatically. Leave it blank for no ads.</p>
+    <div class="inline"><button class="btn">Save appearance</button><button type="button" class="btn secondary" id="reset-preview">Undo unsaved changes</button></div>
+  </form>`;
+  const form = $("appearance-form");
+  wireUploads(form);
+  const preview = () => {
+    const f = Object.fromEntries(new FormData(form));
+    $("rv").textContent = f.corner_radius;
+    applyTheme({ ...settings, ...f, corner_radius: parseInt(f.corner_radius) });
+  };
+  form.addEventListener("input", preview);
+  form.querySelectorAll("[data-preset]").forEach((b) => b.onclick = () => {
+    Object.entries(PRESETS[b.dataset.preset]).forEach(([k, v]) => (form.querySelector(`[name=${k}]`).value = v)); preview();
+  });
+  $("reset-preview").onclick = () => { applyTheme(settings); loadAppearance(); };
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const f = Object.fromEntries(new FormData(form));
+    f.corner_radius = parseInt(f.corner_radius);
+    f.adsense_client = f.adsense_client.trim();
+    if (f.adsense_client && !/^ca-pub-\d+$/.test(f.adsense_client)) return toast("AdSense ID should look like ca-pub-1234567890");
+    await saveSettings(f);
+  });
+}
+
+// ---------- Payment & pickup ----------
+function loadSettings() {
+  const s = settings;
+  $("tab-settings").innerHTML = `<form id="settings-form" class="card">
+    <h2>Payment options</h2><p class="muted">Leave a handle blank to hide that option at checkout. Customers see these after they order, along with their order number to put in the memo.</p>
+    <div class="row"><div><label>Zelle (email or phone)</label><input name="zelle_handle" value="${esc(s.zelle_handle)}"></div>
+      <div><label>Venmo username</label><input name="venmo_handle" value="${esc(s.venmo_handle)}" placeholder="@yourname"></div></div>
+    <label style="font-weight:400"><input type="checkbox" name="allow_pay_at_pickup" ${s.allow_pay_at_pickup ? "checked" : ""}>Allow "Pay at pickup"</label>
+    <h2 style="margin-top:28px">Pickup</h2>
+    <label>Pickup location (shown at checkout)</label><input name="pickup_location" value="${esc(s.pickup_location)}" placeholder="e.g. Downtown Austin. Exact address sent after ordering.">
+    <label>Pickup instructions (shown after ordering)</label><textarea name="pickup_instructions">${esc(s.pickup_instructions)}</textarea>
+    <button class="btn" style="margin-top:16px">Save</button></form>`;
+  $("settings-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const f = Object.fromEntries(new FormData(e.target));
+    f.allow_pay_at_pickup = f.allow_pay_at_pickup === "on";
+    await saveSettings(f);
+  });
+}
+async function saveSettings(patch) {
+  const { data, error } = await sb.from("settings").update({ ...patch, updated_at: new Date().toISOString() }).eq("id", 1).select().single();
+  if (error) return toast(error.message);
+  settings = data; localStorage.setItem("shop_settings", JSON.stringify(data)); applyTheme(data); toast("Saved!");
+}
+
+boot();
+</script>
+</body>
+</html>

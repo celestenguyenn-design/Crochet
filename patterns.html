@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Free Patterns</title>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<header id="site-header"></header>
+<main class="container">
+  <h1>Free Patterns</h1>
+  <p class="muted">Free crochet patterns to make at home. Enjoy!</p>
+  <div class="ad-slot"></div>
+  <div id="list" class="grid"><p class="muted">Loading…</p></div>
+</main>
+<script type="module">
+import { sb, getSettings, renderChrome, esc, safeUrl } from "./assets/common.js";
+renderChrome(await getSettings(), "patterns");
+const { data, error } = await sb.from("patterns").select("slug,title,summary,cover_image_url,difficulty,published_at").eq("published", true).order("published_at", { ascending: false });
+const box = document.getElementById("list");
+if (error) box.innerHTML = `<p class="error">Couldn't load patterns.</p>`;
+else if (!data.length) box.innerHTML = `<p class="muted">Patterns coming soon!</p>`;
+else box.innerHTML = data.map((p) => `<a class="pattern-card" href="pattern.html?p=${encodeURIComponent(p.slug)}">
+  ${safeUrl(p.cover_image_url) ? `<img class="img" src="${esc(p.cover_image_url)}" alt="" loading="lazy">` : `<div class="img"></div>`}
+  <div class="body"><span class="tag">${esc(p.difficulty)}</span><h3 style="margin-top:8px">${esc(p.title)}</h3><p class="muted">${esc(p.summary)}</p></div></a>`).join("");
+</script>
+<footer id="site-footer"></footer>
+</body>
+</html>

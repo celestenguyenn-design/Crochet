@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cart</title>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<header id="site-header"></header>
+<main class="container">
+  <div id="checkout-view">
+    <h1>Your cart</h1>
+    <div class="layout-2">
+      <div><div id="items"></div><p class="total" id="total"></p></div>
+      <form id="form" class="card">
+        <h2>Pickup order</h2>
+        <p class="muted" id="pickup-info"></p>
+        <label>Your name *</label><input name="name" required maxlength="200">
+        <label>Email *</label><input name="email" type="email" required maxlength="200">
+        <label>Phone (for pickup coordination)</label><input name="phone" type="tel" maxlength="50">
+        <label>How would you like to pay?</label>
+        <div id="pay-options"></div>
+        <label>Notes (pickup time preferences, etc.)</label><textarea name="notes" maxlength="2000"></textarea>
+        <p class="error" id="err"></p>
+        <button class="btn" id="submit" style="width:100%">Place pickup order</button>
+      </form>
+    </div>
+  </div>
+  <div id="done-view" class="article" style="display:none"></div>
+</main>
+<script type="module">
+import { sb, getSettings, renderChrome, esc, money, safeUrl, cart } from "./assets/common.js";
+const s = await getSettings();
+renderChrome(s, "cart");
+document.getElementById("pickup-info").textContent = s.pickup_location || "";
+
+const opts = [];
+if (s.zelle_handle) opts.push(["zelle", "Zelle", `Send to <b>${esc(s.zelle_handle)}</b> after ordering. No fees.`]);
+if (s.venmo_handle) opts.push(["venmo", "Venmo", `Send to <b>${esc(s.venmo_handle)}</b> after ordering.`]);
+if (s.allow_pay_at_pickup) opts.push(["pickup", "Pay at pickup", "Cash or app payment when you pick up."]);
+document.getElementById("pay-options").innerHTML = opts.length
+  ? opts.map(([v, l, d], i) => `<label class="pay-option"><input type="radio" name="pay" value="${v}" ${i === 0 ? "checked" : ""} required><span><b>${l}</b><br><span class="muted">${d}</span></span></label>`).join("")
+  : `<p class="error">Payment options haven't been set up yet.</p>`;
+
+function render() {
+  const items = cart.get();
+  const box = document.getElementById("items");
+  if (!items.length) {
+    box.innerHTML = `<p>Your cart is empty. <a href="index.html">Go shopping →</a></p>`;
+    document.getElementById("total").textContent = "";
+    document.getElementById("submit").disabled = true;
+    return;
+  }
+  box.innerHTML = items.map((i, idx) => `<div class="cart-item">
+    ${safeUrl(i.image_url) ? `<img src="${esc(i.image_url)}" alt="">` : `<div class="ph"></div>`}
+    <div><b>${esc(i.name)}</b><br><span class="muted">${money(i.price_cents)} each</span></div>
+    <input class="qty" type="number" min="1" max="100" value="${i.quantity}" data-idx="${idx}">
+    <button class="btn small secondary" data-remove="${idx}" type="button">Remove</button></div>`).join("");
+  const total = items.reduce((t, i) => t + i.price_cents * i.quantity, 0);
+  document.getElementById("total").textContent = `Total: ${money(total)} (no tax)`;
+}
+render();
+document.getElementById("items").addEventListener("change", (e) => {
+  const idx = e.target.dataset.idx; if (idx === undefined) return;
+  const items = cart.get(); items[idx].quantity = Math.max(1, Math.min(100, parseInt(e.target.value) || 1)); cart.save(items); render();
+});
+document.getElementById("items").addEventListener("click", (e) => {
+  const idx = e.target.dataset.remove; if (idx === undefined) return;
+  const items = cart.get(); items.splice(idx, 1); cart.save(items); render();
+});
+
+document.getElementById("form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const f = new FormData(e.target);
+  const btn = document.getElementById("submit"), err = document.getElementById("err");
+  btn.disabled = true; err.textContent = "";
+  const { data, error } = await sb.rpc("place_order", {
+    p_name: f.get("name"), p_email: f.get("email"), p_phone: f.get("phone"),
+    p_payment_method: f.get("pay"), p_notes: f.get("notes"),
+    p_items: cart.get().map((i) => ({ product_id: i.product_id, quantity: i.quantity })),
+  });
+  if (error) { err.textContent = error.message; btn.disabled = false; return; }
+  cart.clear();
+  const n = data.order_number, amt = money(data.total_cents);
+  let payMsg = "";
+  if (data.payment_method === "zelle") payMsg = `<p>Please send <b>${amt}</b> via <b>Zelle</b> to <b>${esc(s.zelle_handle)}</b> and put <b>Order #${n}</b> in the memo.</p>`;
+  else if (data.payment_method === "venmo") {
+    const handle = s.venmo_handle.replace(/^@/, "");
+    payMsg = `<p>Please send <b>${amt}</b> via <b>Venmo</b> to <b>@${esc(handle)}</b> with <b>Order #${n}</b> in the note.</p>
+      <p><a class="btn" href="https://venmo.com/${encodeURIComponent(handle)}?txn=pay&amount=${(data.total_cents/100).toFixed(2)}&note=${encodeURIComponent("Order #" + n)}">Open Venmo</a></p>`;
+  } else payMsg = `<p>You'll pay <b>${amt}</b> when you pick up.</p>`;
+  document.getElementById("checkout-view").style.display = "none";
+  const done = document.getElementById("done-view");
+  done.style.display = "";
+  done.innerHTML = `<h1>Thank you! 🧶</h1><div class="notice"><h2>Order #${n}</h2>${payMsg}
+    <p><b>Pickup:</b> ${esc(s.pickup_location)}</p>${s.pickup_instructions ? `<p style="white-space:pre-wrap">${esc(s.pickup_instructions)}</p>` : ""}
+    <p class="muted">Save your order number. I'll reach out when your order is ready for pickup.</p></div>`;
+});
+</script>
+<footer id="site-footer"></footer>
+</body>
+</html>

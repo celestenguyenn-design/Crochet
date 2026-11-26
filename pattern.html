@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pattern</title>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<header id="site-header"></header>
+<main class="container"><article id="article" class="article"><p class="muted">Loading…</p></article></main>
+<script type="module">
+import { sb, getSettings, renderChrome, esc, safeUrl } from "./assets/common.js";
+import { marked, DOMPurify } from "./assets/vendor/markdown.js";
+const s = await getSettings();
+const slug = new URLSearchParams(location.search).get("p");
+const { data: p } = await sb.from("patterns").select("*").eq("slug", slug).maybeSingle();
+const el = document.getElementById("article");
+if (!p) { el.innerHTML = `<h1>Pattern not found</h1><p><a href="patterns.html">← All patterns</a></p>`; renderChrome(s, "patterns"); }
+else {
+  document.title = p.title;
+  if (p.summary) {
+    const m = document.createElement("meta"); m.name = "description"; m.content = p.summary; document.head.appendChild(m);
+  }
+  // Put an ad slot after roughly the first third of the pattern.
+  const html = DOMPurify.sanitize(marked.parse(p.body || ""));
+  const parts = html.split(/(?=<h2)/);
+  const mid = Math.max(1, Math.floor(parts.length / 3));
+  const body = parts.length > 1 ? parts.slice(0, mid).join("") + `<div class="ad-slot"></div>` + parts.slice(mid).join("") : html;
+  el.innerHTML = `<p><a href="patterns.html">← All patterns</a></p>
+    <span class="tag">${esc(p.difficulty)}</span><h1 style="margin-top:10px">${esc(p.title)}</h1>
+    ${p.published_at ? `<p class="muted">${new Date(p.published_at).toLocaleDateString(undefined, { dateStyle: "long" })}</p>` : ""}
+    ${safeUrl(p.cover_image_url) ? `<img class="cover" src="${esc(p.cover_image_url)}" alt="${esc(p.title)}">` : ""}
+    ${p.summary ? `<p><i>${esc(p.summary)}</i></p>` : ""}
+    <div class="ad-slot"></div>
+    ${p.materials ? `<div class="materials"><b>Materials</b>\n${esc(p.materials)}</div>` : ""}
+    <div class="content">${body}</div>
+    <div class="ad-slot"></div>
+    <div class="notice center"><p>Don't want to make it yourself?</p><a class="btn" href="custom.html">Request a custom piece</a> <a class="btn secondary" href="index.html">Visit the shop</a></div>`;
+  renderChrome(s, "patterns");
+}
+</script>
+<footer id="site-footer"></footer>
+</body>
+</html>
