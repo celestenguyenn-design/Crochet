@@ -1,6 +1,6 @@
 :root {
-  --primary: #c06c84; --accent: #f8b195; --bg: #fff8f3; --text: #3d2c34; --card: #ffffff;
-  --radius: 14px; --font-heading: "Fraunces", serif; --font-body: "Nunito", sans-serif;
+  --primary: #e27aa8; --accent: #d9c6f5; --bg: #fff6fa; --text: #5b4463; --card: #ffffff;
+  --radius: 24px; --font-heading: "Fredoka", sans-serif; --font-body: "Quicksand", sans-serif;
   --muted: color-mix(in srgb, var(--text) 60%, transparent);
   --line: color-mix(in srgb, var(--text) 12%, transparent);
 }
@@ -92,3 +92,57 @@ input[type=checkbox], input[type=radio] { width: auto; margin-right: 6px; }
 .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--text); color: var(--bg);
   padding: 10px 20px; border-radius: 99px; z-index: 100; font-weight: 600; }
 .center { text-align: center; }
+
+/* ================= Bubbly style layer ================= */
+:root { --shadow: 0 6px 20px color-mix(in srgb, var(--primary) 14%, transparent); }
+h1, h2, h3 { color: color-mix(in srgb, var(--text) 85%, var(--primary)); font-weight: 600; }
+body { background:
+  radial-gradient(circle at 8% 12%, color-mix(in srgb, var(--accent) 22%, transparent) 0 120px, transparent 121px),
+  radial-gradient(circle at 92% 30%, color-mix(in srgb, var(--primary) 10%, transparent) 0 160px, transparent 161px),
+  radial-gradient(circle at 15% 85%, color-mix(in srgb, var(--primary) 8%, transparent) 0 140px, transparent 141px),
+  var(--bg); background-attachment: fixed; }
+
+/* Header: soft frosted bar with pill nav */
+#site-header { background: color-mix(in srgb, var(--card) 80%, transparent); backdrop-filter: blur(10px); border-bottom: 0; box-shadow: var(--shadow); }
+.logo-text { color: var(--primary); letter-spacing: .5px; }
+nav a { border-radius: 999px; padding: 8px 16px; transition: background .2s, transform .2s; }
+nav a:hover { transform: translateY(-1px); }
+nav a.active { background: var(--primary); color: #fff; }
+nav a.active .badge { background: #fff; color: var(--primary); }
+
+/* Pill buttons with a gentle bounce */
+.btn { border-radius: 999px; padding: 11px 24px; box-shadow: 0 4px 0 color-mix(in srgb, var(--primary) 70%, #000 10%); transition: transform .15s, box-shadow .15s, filter .15s; }
+.btn:hover { transform: translateY(-2px); }
+.btn:active { transform: translateY(2px); box-shadow: 0 1px 0 color-mix(in srgb, var(--primary) 70%, #000 10%); }
+.btn.secondary { box-shadow: none; background: var(--card); }
+.btn.danger { box-shadow: none; }
+
+/* Cards float softly */
+.card, .product, .pattern-card { border: 0; box-shadow: var(--shadow); }
+.product, .pattern-card { transition: transform .2s, box-shadow .2s; }
+.product:hover, .pattern-card:hover { transform: translateY(-4px) rotate(-.4deg); box-shadow: 0 12px 28px color-mix(in srgb, var(--primary) 22%, transparent); }
+.product .img, .pattern-card .img { border-radius: calc(var(--radius) - 6px); margin: 10px; width: calc(100% - 20px); }
+.product .body { padding-top: 6px; }
+.tag { background: color-mix(in srgb, var(--accent) 55%, var(--card)); color: var(--text); }
+
+/* Hero: pastel gradient blob with wavy bottom edge */
+.hero { position: relative; overflow: hidden; padding: 72px 32px 96px;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--primary) 28%, var(--bg)), color-mix(in srgb, var(--accent) 65%, var(--bg))); }
+.hero::before, .hero::after { content: ""; position: absolute; border-radius: 50%; background: color-mix(in srgb, var(--card) 35%, transparent); pointer-events: none; }
+.hero::before { width: 220px; height: 220px; top: -70px; left: -60px; }
+.hero::after { width: 160px; height: 160px; bottom: 10px; right: -40px; }
+.hero.has-img::before, .hero.has-img::after { display: none; }
+.hero > * { position: relative; z-index: 1; }
+.hero .wave { position: absolute; left: 0; right: 0; bottom: -1px; height: 40px; z-index: 1; color: var(--bg); }
+.hero h1 { color: inherit; }
+
+/* Section headings get a little sparkle */
+main > h2, .section-title { display: flex; align-items: center; gap: 10px; }
+main > h2::after, .section-title::after { content: "♡"; color: var(--primary); font-size: .8em; }
+
+/* Form fields: rounded & soft */
+input, textarea, select { border: 2px solid color-mix(in srgb, var(--accent) 55%, transparent); border-radius: 16px; }
+input:focus, textarea:focus, select:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary) 15%, transparent); }
+.pay-option { border-color: color-mix(in srgb, var(--accent) 55%, transparent); }
+.notice, .materials { border: 2px dashed color-mix(in srgb, var(--primary) 35%, transparent); }
+.badge { border-radius: 999px; }

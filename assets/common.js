@@ -4,6 +4,7 @@ import { SUPABASE_URL, SUPABASE_KEY } from "./config.js";
 export const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 export const FONTS = {
+  "Fredoka": "sans-serif", "Comfortaa": "sans-serif", "Sniglet": "sans-serif", "Chewy": "cursive", "Grandstander": "sans-serif",
   "Fraunces": "serif", "Playfair Display": "serif", "Lora": "serif", "DM Serif Display": "serif",
   "Pacifico": "cursive", "Caveat": "cursive", "Amatic SC": "cursive", "Baloo 2": "sans-serif",
   "Nunito": "sans-serif", "Quicksand": "sans-serif", "Poppins": "sans-serif", "Inter": "sans-serif",
@@ -22,7 +23,8 @@ function loadFont(name) {
   loadedFonts.add(name);
   const l = document.createElement("link");
   l.rel = "stylesheet";
-  l.href = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(name)}:wght@400;600;700&display=swap`;
+  const weights = { "Sniglet": "400;800", "Chewy": "400", "Pacifico": "400", "Caveat": "400;700", "Amatic SC": "400;700", "DM Serif Display": "400" }[name] || "400;600;700";
+  l.href = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(name).replace(/%20/g, "+")}:wght@${weights}&display=swap`;
   document.head.appendChild(l);
 }
 

@@ -25,7 +25,8 @@ if (safeUrl(s.hero_image_url)) {
   hero.style.backgroundImage = `linear-gradient(rgba(0,0,0,.25),rgba(0,0,0,.25)), url("${encodeURI(s.hero_image_url)}")`;
 }
 hero.innerHTML = `<h1>${esc(s.hero_title)}</h1><p>${esc(s.hero_subtitle)}</p>
-  <a class="btn" href="#products">Shop now</a> <a class="btn secondary" href="custom.html" style="background:var(--card)">Request a custom piece</a>`;
+  <a class="btn" href="#products">Shop now</a> <a class="btn secondary" href="custom.html">Request a custom piece</a>
+  <svg class="wave" viewBox="0 0 1200 40" preserveAspectRatio="none" aria-hidden="true"><path fill="currentColor" d="M0,20 C150,45 300,0 450,20 C600,40 750,0 900,20 C1050,40 1150,10 1200,20 L1200,40 L0,40 Z"/></svg>`;
 
 if (s.about_text) {
   const a = document.getElementById("about");

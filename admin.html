@@ -294,6 +294,7 @@ function patternDialog(p) {
 
 // ---------- Appearance ----------
 const PRESETS = {
+  "Pastel bubbly": { color_primary: "#e27aa8", color_accent: "#d9c6f5", color_background: "#fff6fa", color_text: "#5b4463", color_card: "#ffffff", font_heading: "Fredoka", font_body: "Quicksand", corner_radius: 24 },
   "Rose (default)": { color_primary: "#c06c84", color_accent: "#f8b195", color_background: "#fff8f3", color_text: "#3d2c34", color_card: "#ffffff" },
   "Sage": { color_primary: "#5f7f5a", color_accent: "#c9d8b6", color_background: "#f7f6ef", color_text: "#2f3a2c", color_card: "#ffffff" },
   "Lavender": { color_primary: "#7b68a6", color_accent: "#d9cdf0", color_background: "#faf8fd", color_text: "#332b45", color_card: "#ffffff" },
@@ -336,7 +337,7 @@ function loadAppearance() {
   };
   form.addEventListener("input", preview);
   form.querySelectorAll("[data-preset]").forEach((b) => b.onclick = () => {
-    Object.entries(PRESETS[b.dataset.preset]).forEach(([k, v]) => (form.querySelector(`[name=${k}]`).value = v)); preview();
+    Object.entries(PRESETS[b.dataset.preset]).forEach(([k, v]) => { const f = form.querySelector(`[name=${k}]`); if (f) f.value = v; }); preview();
   });
   $("reset-preview").onclick = () => { applyTheme(settings); loadAppearance(); };
   form.addEventListener("submit", async (e) => {
