@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FAQ</title>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<header id="site-header"></header>
+<main class="container article"><h1>Frequently Asked Questions</h1><div id="faq"><p class="muted">Loading…</p></div>
+<div class="notice center" style="margin-top:28px"><p>Still have a question?</p><a class="btn" href="custom.html">Send me a message</a></div></main>
+<script type="module">
+import { sb, getSettings, renderChrome } from "./assets/common.js";
+import { faqList } from "./assets/sections.js";
+renderChrome(await getSettings(), "");
+const { data } = await sb.from("faqs").select("*").order("sort_order");
+document.getElementById("faq").innerHTML = data?.length ? faqList(data) : `<p class="muted">No questions yet.</p>`;
+</script>
+<footer id="site-footer"></footer>
+</body>
+</html>

@@ -23,6 +23,36 @@
   .stats .card b { font-size: 1.5rem; display: block; }
   .preview-swatch { display: flex; gap: 8px; margin-top: 12px; }
   .preview-swatch span { flex: 1; height: 36px; border-radius: 8px; border: 1px solid var(--line); }
+  .extra-photos { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+  .extra-photos div { position: relative; } .extra-photos img { width: 72px; height: 72px; object-fit: cover; border-radius: 10px; }
+  .extra-photos button { position: absolute; top: -6px; right: -6px; padding: 0 7px; box-shadow: none; }
+  .opt-edit { margin-bottom: 10px; box-shadow: none; border: 1px solid var(--line); padding: 12px; }
+  .faq-edit hr { border: 0; border-top: 1px solid var(--line); margin: 16px 0; }
+  details > summary { cursor: pointer; }
+  /* Homepage builder */
+  .hp { display: grid; grid-template-columns: 380px 1fr; gap: 20px; align-items: start; }
+  @media (max-width: 960px) { .hp { grid-template-columns: 1fr; } }
+  .hp-bar { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 14px; position: sticky; top: 76px; z-index: 5; }
+  .hp-side > .card { margin-bottom: 12px; }
+  .hp-item { padding: 10px 12px; margin-bottom: 10px; }
+  .hp-item.off { opacity: .55; }
+  .hp-item.open { outline: 2px solid var(--primary); }
+  .hp-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .hp-name { display: flex; gap: 10px; align-items: center; background: none; border: 0; font: inherit; color: inherit; text-align: left; cursor: pointer; flex: 1; padding: 4px 0; }
+  .hp-icon { font-size: 1.4rem; }
+  .hp-actions { display: flex; gap: 2px; flex-shrink: 0; }
+  .hp-actions button { background: none; border: 0; font-size: 1.05rem; cursor: pointer; padding: 6px; border-radius: 8px; color: var(--text); }
+  .hp-actions button:hover:not(:disabled) { background: var(--line); }
+  .hp-actions button:disabled { opacity: .25; cursor: default; }
+  .hp-fields { border-top: 1px solid var(--line); margin-top: 8px; }
+  .hp-picker { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+  .hp-picker button { text-align: left; cursor: pointer; font: inherit; color: inherit; font-size: .9rem; padding: 12px; }
+  .hp-picker .hp-icon { display: block; margin-bottom: 4px; }
+  .hp-preview { position: sticky; top: 76px; }
+  .hp-preview-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-weight: 700; }
+  .hp-frame-wrap { background: var(--line); border-radius: var(--radius); padding: 10px; display: flex; justify-content: center; }
+  #hp-frame { width: 100%; height: 78vh; border: 0; border-radius: calc(var(--radius) - 6px); background: #fff; transition: width .3s; }
+  @media (max-width: 960px) { .hp-preview { position: static; } #hp-frame { height: 70vh; } }
   .gal-admin { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
   .gal-admin img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 12px; }
   dialog { border: 0; border-radius: var(--radius); padding: 0; width: min(760px, 95vw); background: var(--bg); color: var(--text); }
@@ -45,15 +75,21 @@
       <button data-tab="orders" class="active">Orders</button>
       <button data-tab="requests">Custom Requests</button>
       <button data-tab="products">Products</button>
+      <button data-tab="homepage">Homepage</button>
       <button data-tab="gallery">Gallery</button>
       <button data-tab="patterns">Patterns</button>
+      <button data-tab="reviews">Reviews &amp; FAQ</button>
+      <button data-tab="pages">Pages</button>
       <button data-tab="appearance">Appearance</button>
       <button data-tab="settings">Payment &amp; Pickup</button>
     </div>
     <section id="tab-orders"></section>
     <section id="tab-requests" hidden></section>
     <section id="tab-products" hidden></section>
+    <section id="tab-homepage" hidden></section>
     <section id="tab-gallery" hidden></section>
+    <section id="tab-reviews" hidden></section>
+    <section id="tab-pages" hidden></section>
     <section id="tab-patterns" hidden></section>
     <section id="tab-appearance" hidden></section>
     <section id="tab-settings" hidden></section>
@@ -63,6 +99,7 @@
 
 <script type="module">
 import { sb, getSettings, applyTheme, esc, money, safeUrl, toast, FONTS } from "./assets/common.js";
+import { SECTION_TYPES, newSection } from "./assets/sections.js";
 
 let settings = await getSettings();
 const $ = (id) => document.getElementById(id);
@@ -90,7 +127,7 @@ $("login").addEventListener("submit", async (e) => {
 $("logout").addEventListener("click", async (e) => { e.preventDefault(); await sb.auth.signOut(); boot(); });
 
 // ---------- Tabs ----------
-const loaders = { orders: loadOrders, requests: loadRequests, products: loadProducts, gallery: loadGallery, patterns: loadPatterns, appearance: loadAppearance, settings: loadSettings };
+const loaders = { orders: loadOrders, requests: loadRequests, products: loadProducts, homepage: loadHomepage, gallery: loadGallery, reviews: loadReviews, pages: loadPages, patterns: loadPatterns, appearance: loadAppearance, settings: loadSettings };
 function showTab(name) {
   document.querySelectorAll("#tabs button").forEach((b) => b.classList.toggle("active", b.dataset.tab === name));
   document.querySelectorAll("#app > section").forEach((s) => (s.hidden = s.id !== "tab-" + name));
@@ -202,15 +239,51 @@ async function loadRequests() {
 }
 
 // ---------- Products ----------
+let categories = [];
 async function loadProducts() {
   const el = $("tab-products");
-  const { data, error } = await sb.from("products").select("*").order("sort_order").order("created_at", { ascending: false });
+  const [{ data, error }, { data: cats }] = await Promise.all([
+    sb.from("products").select("*").order("sort_order").order("created_at", { ascending: false }),
+    sb.from("categories").select("*").order("sort_order").order("name"),
+  ]);
   if (error) { el.innerHTML = `<p class="error">${esc(error.message)}</p>`; return; }
-  el.innerHTML = `<p><button class="btn" id="new-product">+ Add product</button></p><div class="list">${data.map((p) => `<div class="card head" style="align-items:center">
+  categories = cats || [];
+  const catName = (id) => categories.find((c) => c.id === id)?.name;
+  el.innerHTML = `<details class="card" style="margin-bottom:18px"><summary><b>Categories</b> <span class="muted">(${categories.length}) – tap to manage</span></summary>
+    <p class="muted">Group products (e.g. Plushies, Wearables, Keychains). Shoppers can filter by these, and you can show category tiles on your homepage.</p>
+    <div class="list">${categories.map((c) => `<div class="inline cat-row" data-id="${c.id}" style="align-items:center">
+      ${safeUrl(c.image_url) ? `<img class="thumb" src="${esc(c.image_url)}">` : `<div class="thumb"></div>`}
+      <div><input name="name" value="${esc(c.name)}"></div>
+      <div style="max-width:90px"><input name="sort_order" type="number" value="${c.sort_order}" title="Order"></div>
+      <input type="file" accept="image/*" data-cat-img style="max-width:200px">
+      <button class="btn small" data-cat-save>Save</button><button class="btn small danger" data-cat-del>Delete</button></div>`).join("")}</div>
+    <div class="inline"><div><input id="new-cat" placeholder="New category name"></div><button class="btn small" id="add-cat">+ Add category</button></div></details>
+    <p><button class="btn" id="new-product">+ Add product</button></p><div class="list">${data.map((p) => `<div class="card head" style="align-items:center">
     <div style="display:flex; gap:14px; align-items:center">${safeUrl(p.image_url) ? `<img class="thumb" src="${esc(p.image_url)}">` : `<div class="thumb"></div>`}
-    <div><b>${esc(p.name)}</b> ${p.featured ? `<span class="pill">★ Best seller</span>` : ""} ${p.active ? "" : `<span class="pill">Hidden</span>`}<br><span class="muted">${money(p.price_cents)} · ${p.stock === null ? "Made to order" : p.stock + " in stock"}</span></div></div>
+    <div><b>${esc(p.name)}</b> ${p.featured ? `<span class="pill">★ Best seller</span>` : ""} ${p.active ? "" : `<span class="pill">Hidden</span>`}<br><span class="muted">${money(p.price_cents)} · ${p.stock === null ? "Made to order" : p.stock + " in stock"}${catName(p.category_id) ? " · " + esc(catName(p.category_id)) : ""}${(p.options || []).length ? " · has options" : ""}</span></div></div>
     <button class="btn small secondary" data-edit="${p.id}">Edit</button></div>`).join("") || `<p class="muted">No products yet. Add your first one!</p>`}</div>`;
-  $("new-product").onclick = () => productDialog({ active: true, sort_order: 0, stock: null });
+  $("new-product").onclick = () => productDialog({ active: true, sort_order: 0, stock: null, images: [], options: [] });
+  $("add-cat").onclick = async () => {
+    const name = $("new-cat").value.trim(); if (!name) return;
+    const { error } = await sb.from("categories").insert({ name, sort_order: categories.length });
+    toast(error ? error.message : "Category added"); loadProducts();
+  };
+  el.querySelectorAll(".cat-row").forEach((row) => {
+    const id = row.dataset.id;
+    row.querySelector("[data-cat-save]").onclick = async () => {
+      const { error } = await sb.from("categories").update({ name: row.querySelector("[name=name]").value, sort_order: parseInt(row.querySelector("[name=sort_order]").value) || 0 }).eq("id", id);
+      toast(error ? error.message : "Saved"); loadProducts();
+    };
+    row.querySelector("[data-cat-del]").onclick = async () => {
+      if (!confirm("Delete this category? Products in it stay, just uncategorized.")) return;
+      await sb.from("categories").delete().eq("id", id); loadProducts();
+    };
+    row.querySelector("[data-cat-img]").onchange = async (e) => {
+      if (!e.target.files[0]) return; toast("Uploading…");
+      const url = await uploadImage(e.target.files[0]);
+      if (url) { await sb.from("categories").update({ image_url: url }).eq("id", id); toast("Photo saved"); loadProducts(); }
+    };
+  });
   el.querySelectorAll("[data-edit]").forEach((b) => b.onclick = () => productDialog(data.find((p) => p.id === b.dataset.edit)));
 }
 function productDialog(p) {
@@ -220,13 +293,50 @@ function productDialog(p) {
     <label>Description</label><textarea name="description">${esc(p.description)}</textarea>
     <div class="row"><div><label>Price ($) *</label><input name="price" type="number" step="0.01" min="0" required value="${p.price_cents != null ? (p.price_cents / 100).toFixed(2) : ""}"></div>
     <div><label>Quantity in stock</label><input name="stock" type="number" min="0" value="${p.stock ?? ""}" placeholder="Blank = made to order"></div></div>
-    ${imgField("image_url", "Photo", p.image_url)}
+    <label>Category</label><select name="category_id"><option value="">— None —</option>${categories.map((c) => `<option value="${c.id}" ${c.id === p.category_id ? "selected" : ""}>${esc(c.name)}</option>`).join("")}</select>
+    ${imgField("image_url", "Main photo", p.image_url)}
+    <label>More photos</label>
+    <div class="extra-photos" id="extra-photos"></div>
+    <input type="file" accept="image/*" multiple id="extra-upload">
+    <label>Options <span class="muted" style="font-weight:400">(optional — like size or color)</span></label>
+    <p class="muted" style="margin:0 0 8px; font-size:.9rem">One choice per line. To charge more for a choice, add the extra amount: <code>Large +5</code></p>
+    <div id="options-box"></div>
+    <button type="button" class="btn small secondary" id="add-option">+ Add an option</button>
     <div class="row"><div><label>Display order</label><input name="sort_order" type="number" value="${p.sort_order ?? 0}"></div>
     <div><label>&nbsp;</label><label style="font-weight:400"><input type="checkbox" name="active" ${p.active ? "checked" : ""}>Show on shop</label>
     <label style="font-weight:400; margin-top:0"><input type="checkbox" name="featured" ${p.featured ? "checked" : ""}>★ Best seller (show at top of home page)</label></div></div>
     <div class="inline"><button class="btn" value="save">Save</button><button class="btn secondary" value="cancel" formnovalidate>Cancel</button>
     ${p.id ? `<button class="btn danger" value="delete" formnovalidate style="margin-left:auto">Delete</button>` : ""}</div></form>`;
   wireUploads(d);
+  // extra photos
+  let extras = [...(p.images || [])];
+  const paintExtras = () => {
+    d.querySelector("#extra-photos").innerHTML = extras.map((u, i) => `<div><img src="${esc(u)}"><button type="button" class="btn small danger" data-rm="${i}">✕</button></div>`).join("") || `<span class="muted">None yet</span>`;
+    d.querySelectorAll("[data-rm]").forEach((b) => b.onclick = () => { extras.splice(+b.dataset.rm, 1); paintExtras(); });
+  };
+  paintExtras();
+  d.querySelector("#extra-upload").onchange = async (e) => {
+    for (const file of e.target.files) { toast("Uploading…"); const url = await uploadImage(file); if (url) extras.push(url); paintExtras(); }
+  };
+  // options
+  const box = d.querySelector("#options-box");
+  const optRow = (o = { name: "", values: [] }) => {
+    const div = document.createElement("div"); div.className = "opt-edit card";
+    div.innerHTML = `<div class="inline" style="margin-top:0"><div><input class="opt-name" placeholder="Option name, e.g. Size" value="${esc(o.name)}"></div>
+      <button type="button" class="btn small danger">Remove</button></div>
+      <textarea class="opt-values" placeholder="Small&#10;Medium&#10;Large +5" style="min-height:90px; margin-top:8px">${esc(o.values.map((v) => v.label + (v.price_delta_cents ? ` ${v.price_delta_cents > 0 ? "+" : "-"}${Math.abs(v.price_delta_cents / 100)}` : "")).join("\n"))}</textarea>`;
+    div.querySelector(".danger").onclick = () => div.remove();
+    box.appendChild(div);
+  };
+  (p.options || []).forEach(optRow);
+  d.querySelector("#add-option").onclick = () => optRow();
+  const readOptions = () => [...box.querySelectorAll(".opt-edit")].map((div) => ({
+    name: div.querySelector(".opt-name").value.trim(),
+    values: div.querySelector(".opt-values").value.split("\n").map((l) => l.trim()).filter(Boolean).map((l) => {
+      const m = l.match(/^(.*?)\s*([+-])\s*\$?(\d+(?:\.\d{1,2})?)$/);
+      return m ? { label: m[1].trim(), price_delta_cents: (m[2] === "-" ? -1 : 1) * Math.round(parseFloat(m[3]) * 100) } : { label: l, price_delta_cents: 0 };
+    }),
+  })).filter((o) => o.name && o.values.length);
   d.returnValue = ""; d.showModal();
   d.onclose = async () => {
     const f = new FormData(d.querySelector("form"));
@@ -237,9 +347,196 @@ function productDialog(p) {
     if (d.returnValue !== "save") return;
     const row = { name: f.get("name"), description: f.get("description"), price_cents: toCents(f.get("price")),
       stock: f.get("stock") === "" ? null : parseInt(f.get("stock")), image_url: f.get("image_url"),
-      sort_order: parseInt(f.get("sort_order")) || 0, active: f.get("active") === "on", featured: f.get("featured") === "on" };
+      sort_order: parseInt(f.get("sort_order")) || 0, active: f.get("active") === "on", featured: f.get("featured") === "on",
+      category_id: f.get("category_id") || null, images: extras, options: readOptions() };
     const { error } = p.id ? await sb.from("products").update(row).eq("id", p.id) : await sb.from("products").insert(row);
     toast(error ? error.message : "Saved"); loadProducts();
+  };
+}
+
+// ---------- Homepage builder (Shopify-style) ----------
+let draft = null, dirty = false, openId = null, previewWin = null;
+function sendPreview(scrollTo) {
+  previewWin?.postMessage({ type: "preview", sections: draft.sections, settings: draft.ann, scrollTo }, location.origin);
+}
+window.addEventListener("message", (e) => { if (e.origin === location.origin && e.data?.type === "preview-ready" && draft) sendPreview(); });
+window.addEventListener("beforeunload", (e) => { if (dirty) { e.preventDefault(); e.returnValue = ""; } });
+function markDirty(scrollTo) { dirty = true; $("hp-save").disabled = false; $("hp-status").textContent = "Unsaved changes"; sendPreview(scrollTo); }
+
+async function loadHomepage() {
+  if (!categories.length) categories = (await sb.from("categories").select("*").order("sort_order")).data || [];
+  draft = {
+    sections: structuredClone(settings.home_sections?.length ? settings.home_sections : ["hero", "products", "gallery", "shop", "testimonials", "faq"].map(newSection)),
+    ann: { announcement_enabled: settings.announcement_enabled, announcement_text: settings.announcement_text || "", announcement_link: settings.announcement_link || "" },
+  };
+  dirty = false;
+  $("tab-homepage").innerHTML = `<div class="hp">
+    <div class="hp-side">
+      <div class="card hp-bar"><div><b>Homepage editor</b><br><span class="muted" id="hp-status">All changes saved</span></div>
+        <div class="inline" style="margin:0"><button class="btn small secondary" id="hp-discard">Undo</button><button class="btn small" id="hp-save" disabled>Save</button></div></div>
+      <div class="card"><h3>📣 Announcement bar</h3><p class="muted" style="margin:0">A strip at the very top of every page.</p>
+        <label style="font-weight:400"><input type="checkbox" id="ann-on" ${draft.ann.announcement_enabled ? "checked" : ""}>Show announcement</label>
+        <input id="ann-text" placeholder="e.g. Next pickup: Saturday at the farmers market 🌸" value="${esc(draft.ann.announcement_text)}">
+        <input id="ann-link" placeholder="Link (optional), e.g. custom.html or https://…" value="${esc(draft.ann.announcement_link)}" style="margin-top:8px"></div>
+      <h3 style="margin:18px 0 8px">Sections</h3>
+      <div id="hp-list"></div>
+      <button class="btn" id="hp-add" style="width:100%; margin-top:8px">+ Add section</button>
+      <div id="hp-picker" class="hp-picker" hidden></div>
+    </div>
+    <div class="hp-preview"><div class="hp-preview-bar"><span>Live preview</span>
+      <span><button class="btn small secondary" data-w="390">📱</button> <button class="btn small secondary" data-w="100%">🖥️</button></span></div>
+      <div class="hp-frame-wrap"><iframe id="hp-frame" src="index.html?preview=1" title="Preview"></iframe></div></div>
+  </div>`;
+  previewWin = $("hp-frame").contentWindow;
+  $("hp-frame").addEventListener("load", () => { previewWin = $("hp-frame").contentWindow; });
+  document.querySelectorAll(".hp-preview-bar [data-w]").forEach((b) => b.onclick = () => ($("hp-frame").style.width = b.dataset.w === "100%" ? "100%" : b.dataset.w + "px"));
+  const annSync = () => { draft.ann = { announcement_enabled: $("ann-on").checked, announcement_text: $("ann-text").value, announcement_link: $("ann-link").value }; markDirty(); };
+  ["ann-on", "ann-text", "ann-link"].forEach((id) => $(id).addEventListener("input", annSync));
+  $("hp-save").onclick = async () => {
+    await saveSettings({ home_sections: draft.sections, ...draft.ann });
+    dirty = false; $("hp-save").disabled = true; $("hp-status").textContent = "All changes saved ✓";
+  };
+  $("hp-discard").onclick = () => { if (!dirty || confirm("Throw away your unsaved changes?")) loadHomepage(); };
+  $("hp-add").onclick = () => {
+    const pk = $("hp-picker"); pk.hidden = !pk.hidden;
+    pk.innerHTML = Object.entries(SECTION_TYPES).map(([k, t]) => `<button class="card" data-type="${k}"><span class="hp-icon">${t.icon}</span><b>${t.label}</b><br><span class="muted">${t.desc}</span></button>`).join("");
+    pk.querySelectorAll("[data-type]").forEach((b) => b.onclick = () => {
+      const sec = newSection(b.dataset.type); draft.sections.push(sec); openId = sec.id; pk.hidden = true; paintList(); markDirty(sec.id);
+    });
+  };
+  paintList();
+}
+function paintList() {
+  const list = $("hp-list");
+  list.innerHTML = draft.sections.map((sec, i) => {
+    const t = SECTION_TYPES[sec.type]; if (!t) return "";
+    const open = sec.id === openId;
+    return `<div class="card hp-item ${sec.enabled ? "" : "off"} ${open ? "open" : ""}" data-i="${i}">
+      <div class="hp-row"><button class="hp-name" data-act="toggle-open"><span class="hp-icon">${t.icon}</span><span><b>${t.label}</b>${sec.settings.title ? `<br><span class="muted">${esc(sec.settings.title)}</span>` : ""}</span></button>
+        <span class="hp-actions"><button title="Move up" data-act="up" ${i === 0 ? "disabled" : ""}>↑</button><button title="Move down" data-act="down" ${i === draft.sections.length - 1 ? "disabled" : ""}>↓</button>
+        <button title="${sec.enabled ? "Hide" : "Show"}" data-act="vis">${sec.enabled ? "👁" : "🚫"}</button><button title="Delete" data-act="del">🗑</button></span></div>
+      ${open ? `<div class="hp-fields">${t.fields.map((f) => fieldHtml(f, sec.settings[f.key] ?? f.default)).join("") || `<p class="muted">Nothing to set up — it's just a cute divider!</p>`}</div>` : ""}
+    </div>`;
+  }).join("");
+  list.querySelectorAll(".hp-item").forEach((item) => {
+    const i = +item.dataset.i, sec = draft.sections[i];
+    item.querySelector(".hp-row").addEventListener("click", (e) => {
+      const act = e.target.closest("[data-act]")?.dataset.act; if (!act) return;
+      if (act === "toggle-open") { openId = openId === sec.id ? null : sec.id; paintList(); return sendPreview(sec.id); }
+      if (act === "up" || act === "down") { const j = act === "up" ? i - 1 : i + 1; [draft.sections[i], draft.sections[j]] = [draft.sections[j], draft.sections[i]]; }
+      if (act === "vis") sec.enabled = !sec.enabled;
+      if (act === "del") { if (!confirm(`Remove the "${SECTION_TYPES[sec.type].label}" section?`)) return; draft.sections.splice(i, 1); }
+      paintList(); markDirty(act === "del" ? null : sec.id);
+    });
+    const fields = item.querySelector(".hp-fields"); if (!fields) return;
+    fields.addEventListener("input", (e) => {
+      const k = e.target.dataset.key; if (!k) return;
+      sec.settings[k] = e.target.type === "number" ? Number(e.target.value) : e.target.value;
+      markDirty();
+    });
+    fields.querySelectorAll("input[type=file][data-key-img]").forEach((inp) => inp.onchange = async () => {
+      if (!inp.files[0]) return; toast("Uploading…");
+      const url = await uploadImage(inp.files[0]);
+      if (url) { sec.settings[inp.dataset.keyImg] = url; fields.querySelector(`[data-key="${inp.dataset.keyImg}"]`).value = url; toast("Uploaded!"); markDirty(sec.id); }
+    });
+  });
+}
+function fieldHtml(f, v) {
+  const lab = `<label>${esc(f.label)}</label>`;
+  if (f.type === "textarea") return lab + `<textarea data-key="${f.key}">${esc(v)}</textarea>`;
+  if (f.type === "number") return lab + `<input type="number" min="1" max="50" data-key="${f.key}" value="${esc(v)}">`;
+  if (f.type === "select") return lab + `<select data-key="${f.key}">${f.options.map(([val, l]) => `<option value="${val}" ${val === v ? "selected" : ""}>${esc(l)}</option>`).join("")}</select>`;
+  if (f.type === "category") return lab + `<select data-key="${f.key}"><option value="">— Pick one —</option>${categories.map((c) => `<option value="${c.id}" ${c.id === v ? "selected" : ""}>${esc(c.name)}</option>`).join("")}</select>`;
+  if (f.type === "image") return lab + `<input data-key="${f.key}" value="${esc(v)}" placeholder="Upload or paste an image link"><input type="file" accept="image/*" data-key-img="${f.key}" style="margin-top:6px">`;
+  return lab + `<input data-key="${f.key}" value="${esc(v)}">`;
+}
+
+// ---------- Reviews & FAQ ----------
+async function loadReviews() {
+  const el = $("tab-reviews");
+  const [{ data: reviews }, { data: faqs }] = await Promise.all([
+    sb.from("reviews").select("*").order("sort_order").order("created_at", { ascending: false }),
+    sb.from("faqs").select("*").order("sort_order"),
+  ]);
+  el.innerHTML = `<div class="card" style="margin-bottom:22px"><div class="head"><h2>💬 Reviews</h2><button class="btn small" id="new-review">+ Add review</button></div>
+    <p class="muted">Add nice things customers have said (from DMs, comments, texts). Show them with a "Reviews" section in the Homepage tab.</p>
+    <div class="list">${(reviews || []).map((r) => `<div class="card head" style="align-items:center; box-shadow:none; border:1px solid var(--line)">
+      <div><b>${esc(r.name)}</b> <span class="stars">${"★".repeat(r.rating)}</span> ${r.visible ? "" : `<span class="pill">Hidden</span>`}<br><span class="muted">${esc(r.body.slice(0, 90))}${r.body.length > 90 ? "…" : ""}</span></div>
+      <button class="btn small secondary" data-edit-review="${r.id}">Edit</button></div>`).join("") || `<p class="muted">No reviews yet.</p>`}</div></div>
+    <div class="card"><div class="head"><h2>❓ FAQ</h2><button class="btn small" id="new-faq">+ Add question</button></div>
+    <p class="muted">Shown on the FAQ page (linked in your footer) and in the homepage "FAQ" section.</p>
+    <div class="list">${(faqs || []).map((f) => `<div class="faq-edit" data-id="${f.id}">
+      <label>Question</label><input name="question" value="${esc(f.question)}">
+      <label>Answer</label><textarea name="answer" style="min-height:70px">${esc(f.answer)}</textarea>
+      <div class="inline"><div style="max-width:110px"><label style="margin-top:0">Order</label><input name="sort_order" type="number" value="${f.sort_order}"></div>
+      <button class="btn small" data-save>Save</button><button class="btn small danger" data-del>Delete</button></div><hr></div>`).join("") || `<p class="muted">No questions yet.</p>`}</div></div>`;
+  $("new-review").onclick = () => reviewDialog({ rating: 5, visible: true, sort_order: 0 });
+  el.querySelectorAll("[data-edit-review]").forEach((b) => b.onclick = () => reviewDialog(reviews.find((r) => r.id === b.dataset.editReview)));
+  $("new-faq").onclick = async () => { await sb.from("faqs").insert({ question: "New question", answer: "", sort_order: (faqs?.length || 0) + 1 }); loadReviews(); };
+  el.querySelectorAll(".faq-edit").forEach((row) => {
+    row.querySelector("[data-save]").onclick = async () => {
+      const { error } = await sb.from("faqs").update({ question: row.querySelector("[name=question]").value, answer: row.querySelector("[name=answer]").value, sort_order: parseInt(row.querySelector("[name=sort_order]").value) || 0 }).eq("id", row.dataset.id);
+      toast(error ? error.message : "Saved");
+    };
+    row.querySelector("[data-del]").onclick = async () => { if (confirm("Delete this question?")) { await sb.from("faqs").delete().eq("id", row.dataset.id); loadReviews(); } };
+  });
+}
+function reviewDialog(r) {
+  const d = $("dlg");
+  d.innerHTML = `<form method="dialog"><h2>${r.id ? "Edit" : "New"} review</h2>
+    <label>Customer name *</label><input name="name" required value="${esc(r.name)}" placeholder="e.g. Mia R.">
+    <label>What they said *</label><textarea name="body" required>${esc(r.body)}</textarea>
+    <div class="row"><div><label>Stars</label><select name="rating">${[5, 4, 3, 2, 1].map((n) => `<option value="${n}" ${n === r.rating ? "selected" : ""}>${"★".repeat(n)}</option>`).join("")}</select></div>
+    <div><label>Order</label><input name="sort_order" type="number" value="${r.sort_order ?? 0}"></div></div>
+    ${imgField("photo_url", "Photo (optional — their pic with the item)", r.photo_url)}
+    <label style="font-weight:400"><input type="checkbox" name="visible" ${r.visible ? "checked" : ""}>Show on site</label>
+    <div class="inline"><button class="btn" value="save">Save</button><button class="btn secondary" value="cancel" formnovalidate>Cancel</button>
+    ${r.id ? `<button class="btn danger" value="delete" formnovalidate style="margin-left:auto">Delete</button>` : ""}</div></form>`;
+  wireUploads(d);
+  d.returnValue = ""; d.showModal();
+  d.onclose = async () => {
+    const f = new FormData(d.querySelector("form"));
+    if (d.returnValue === "delete") { if (confirm("Delete this review?")) { await sb.from("reviews").delete().eq("id", r.id); loadReviews(); } return; }
+    if (d.returnValue !== "save") return;
+    const row = { name: f.get("name"), body: f.get("body"), rating: +f.get("rating"), sort_order: parseInt(f.get("sort_order")) || 0, photo_url: f.get("photo_url"), visible: f.get("visible") === "on" };
+    const { error } = r.id ? await sb.from("reviews").update(row).eq("id", r.id) : await sb.from("reviews").insert(row);
+    toast(error ? error.message : "Saved"); loadReviews();
+  };
+}
+
+// ---------- Pages ----------
+async function loadPages() {
+  const el = $("tab-pages");
+  const { data, error } = await sb.from("pages").select("*").order("sort_order");
+  if (error) { el.innerHTML = `<p class="error">${esc(error.message)}</p>`; return; }
+  el.innerHTML = `<p class="muted">Extra pages like policies. Pages marked "In footer" are linked at the bottom of every page. I started you with templates — read them over and make them yours.</p>
+    <p><button class="btn" id="new-page">+ New page</button></p>
+    <div class="list">${data.map((pg) => `<div class="card head" style="align-items:center">
+      <div><b>${esc(pg.title)}</b> ${pg.published ? "" : `<span class="pill">Draft</span>`} ${pg.show_in_footer ? `<span class="pill">In footer</span>` : ""}<br><span class="muted">page.html?p=${esc(pg.slug)}</span></div>
+      <span><a class="btn small secondary" target="_blank" href="page.html?p=${encodeURIComponent(pg.slug)}">View</a> <button class="btn small secondary" data-edit="${pg.id}">Edit</button></span></div>`).join("")}</div>`;
+  $("new-page").onclick = () => pageDialog({ published: true, show_in_footer: true, sort_order: data.length + 1 });
+  el.querySelectorAll("[data-edit]").forEach((b) => b.onclick = () => pageDialog(data.find((x) => x.id === b.dataset.edit)));
+}
+function pageDialog(pg) {
+  const d = $("dlg");
+  d.innerHTML = `<form method="dialog"><h2>${pg.id ? "Edit" : "New"} page</h2>
+    <label>Title *</label><input name="title" required value="${esc(pg.title)}">
+    <label>Text</label><p class="muted" style="margin:0 0 6px; font-size:.9rem"><code>## </code> for headings, <code>- </code> for bullets, <code>**bold**</code></p>
+    <textarea name="body" style="min-height:300px">${esc(pg.body)}</textarea>
+    <div class="row"><div><label style="font-weight:400"><input type="checkbox" name="published" ${pg.published ? "checked" : ""}>Published</label></div>
+    <div><label style="font-weight:400"><input type="checkbox" name="show_in_footer" ${pg.show_in_footer ? "checked" : ""}>Link in footer</label></div></div>
+    <label>Order</label><input name="sort_order" type="number" value="${pg.sort_order ?? 0}">
+    <div class="inline"><button class="btn" value="save">Save</button><button class="btn secondary" value="cancel" formnovalidate>Cancel</button>
+    ${pg.id ? `<button class="btn danger" value="delete" formnovalidate style="margin-left:auto">Delete</button>` : ""}</div></form>`;
+  d.returnValue = ""; d.showModal();
+  d.onclose = async () => {
+    const f = new FormData(d.querySelector("form"));
+    if (d.returnValue === "delete") { if (confirm("Delete this page?")) { await sb.from("pages").delete().eq("id", pg.id); loadPages(); } return; }
+    if (d.returnValue !== "save") return;
+    const row = { title: f.get("title"), body: f.get("body"), published: f.get("published") === "on", show_in_footer: f.get("show_in_footer") === "on",
+      sort_order: parseInt(f.get("sort_order")) || 0, updated_at: new Date().toISOString(), slug: pg.slug || slugify(f.get("title")) || "page-" + Date.now() };
+    const { error } = pg.id ? await sb.from("pages").update(row).eq("id", pg.id) : await sb.from("pages").insert(row);
+    toast(error ? (error.code === "23505" ? "A page with that name already exists" : error.message) : "Saved"); loadPages();
   };
 }
 
@@ -356,13 +653,7 @@ function loadAppearance() {
     <h2 style="margin-top:28px">Branding</h2>
     <label>Shop name</label><input name="shop_name" value="${esc(s.shop_name)}">
     ${imgField("logo_url", "Logo (optional — replaces the shop name in the header)", s.logo_url)}
-    <h2 style="margin-top:28px">Home page</h2>
-    <label>Big headline</label><input name="hero_title" value="${esc(s.hero_title)}">
-    <label>Subtitle</label><input name="hero_subtitle" value="${esc(s.hero_subtitle)}">
-    ${imgField("hero_image_url", "Banner photo (optional)", s.hero_image_url)}
-    <div class="row"><div><label>Best sellers section title</label><input name="bestsellers_title" value="${esc(s.bestsellers_title)}"></div>
-      <div><label>Gallery section title</label><input name="gallery_title" value="${esc(s.gallery_title)}"></div></div>
-    <label>About me</label><textarea name="about_text">${esc(s.about_text)}</textarea>
+    <p class="muted">Banner, sections, and About text are now in the <b>Homepage</b> tab.</p>
     <div class="row"><div><label>Instagram link</label><input name="instagram_url" value="${esc(s.instagram_url)}" placeholder="https://instagram.com/…"></div>
       <div><label>TikTok link</label><input name="tiktok_url" value="${esc(s.tiktok_url)}" placeholder="https://tiktok.com/@…"></div></div>
     <h2 style="margin-top:28px">Ads</h2>

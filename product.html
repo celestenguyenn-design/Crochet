@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title></title>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<header id="site-header"></header>
+<main class="container"><div id="product"><p class="muted">Loading…</p></div></main>
+<script type="module">
+import { sb, getSettings, renderChrome, esc, money, safeUrl, cart, toast } from "./assets/common.js";
+import { md } from "./assets/sections.js";
+const s = await getSettings();
+const id = new URLSearchParams(location.search).get("id");
+const { data: p } = id ? await sb.from("products").select("*, categories(name)").eq("id", id).maybeSingle() : { data: null };
+const el = document.getElementById("product");
+if (!p) { el.innerHTML = `<h1>Item not found</h1><p><a href="index.html">← Back to shop</a></p>`; renderChrome(s, "shop"); }
+else {
+  document.title = p.name; renderChrome(s, "shop");
+  const photos = [p.image_url, ...(p.images || [])].filter(safeUrl);
+  const opts = (p.options || []).filter((o) => o.values?.length);
+  const soldOut = p.stock === 0;
+  el.innerHTML = `<p><a href="index.html#shop">← Back to shop</a></p>
+  <div class="pdp">
+    <div class="pdp-photos">
+      ${photos.length ? `<img id="main-img" class="pdp-main" src="${esc(photos[0])}" alt="${esc(p.name)}">` : `<div class="pdp-main ph"></div>`}
+      ${photos.length > 1 ? `<div class="thumbs">${photos.map((u, i) => `<button class="${i ? "" : "active"}" data-src="${esc(u)}"><img src="${esc(u)}" alt=""></button>`).join("")}</div>` : ""}
+    </div>
+    <div class="pdp-info card">
+      ${p.featured ? `<span class="tag">★ Best seller</span>` : ""} ${p.categories ? `<span class="tag">${esc(p.categories.name)}</span>` : ""}
+      <h1 style="margin-top:10px">${esc(p.name)}</h1>
+      <div class="price big" id="price">${money(p.price_cents)}</div>
+      ${opts.map((o, i) => `<label>${esc(o.name)}</label><div class="opt-group" data-opt="${i}">
+        ${o.values.map((v) => `<button type="button" class="opt" data-label="${esc(v.label)}">${esc(v.label)}${v.price_delta_cents ? ` <small>(${v.price_delta_cents > 0 ? "+" : "−"}${money(Math.abs(v.price_delta_cents))})</small>` : ""}</button>`).join("")}</div>`).join("")}
+      <div class="stock" style="margin:14px 0 6px">${p.stock === null ? "Made to order" : soldOut ? "Sold out" : `${p.stock} available`}</div>
+      <div class="inline" style="align-items:center">
+        <input id="qty" class="qty" type="number" min="1" max="${p.stock ?? 100}" value="1" ${soldOut ? "disabled" : ""}>
+        <button class="btn" id="add" ${soldOut ? "disabled" : ""}>${soldOut ? "Sold out" : "Add to cart"}</button>
+      </div>
+      <p class="error" id="err"></p>
+      <div class="desc-full">${md(p.description)}</div>
+    </div>
+  </div>`;
+  const chosen = {};
+  const update = () => {
+    let price = p.price_cents;
+    opts.forEach((o) => { const v = o.values.find((x) => x.label === chosen[o.name]); if (v) price += Number(v.price_delta_cents) || 0; });
+    document.getElementById("price").textContent = money(price);
+  };
+  el.querySelectorAll(".opt-group").forEach((g) => g.addEventListener("click", (e) => {
+    const b = e.target.closest(".opt"); if (!b) return;
+    g.querySelectorAll(".opt").forEach((x) => x.classList.toggle("active", x === b));
+    chosen[opts[g.dataset.opt].name] = b.dataset.label; update();
+    document.getElementById("err").textContent = "";
+  }));
+  el.querySelector(".thumbs")?.addEventListener("click", (e) => {
+    const b = e.target.closest("button"); if (!b) return;
+    document.getElementById("main-img").src = b.dataset.src;
+    el.querySelectorAll(".thumbs button").forEach((x) => x.classList.toggle("active", x === b));
+  });
+  document.getElementById("add").onclick = () => {
+    const missing = opts.find((o) => !chosen[o.name]);
+    if (missing) return (document.getElementById("err").textContent = `Please choose a ${missing.name.toLowerCase()}.`);
+    const qty = Math.max(1, parseInt(document.getElementById("qty").value) || 1);
+    if (p.stock !== null && cart.countOf(p.id) + qty > p.stock) return toast(`Only ${p.stock} available`);
+    cart.add(p, qty, { ...chosen });
+    toast(`Added ${p.name} to cart`);
+  };
+}
+</script>
+<footer id="site-footer"></footer>
+</body>
+</html>

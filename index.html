@@ -8,98 +8,73 @@
 </head>
 <body>
 <header id="site-header"></header>
-<main class="container">
-  <section id="hero" class="hero"><h1>&nbsp;</h1></section>
-  <section id="bestsellers" style="display:none; margin-bottom:48px">
-    <h2 id="bestsellers-title" class="section-title"></h2>
-    <div id="featured" class="grid"></div>
-  </section>
-  <section id="gallery-section" style="display:none; margin-bottom:48px">
-    <h2 id="gallery-title" class="section-title"></h2>
-    <div id="gallery" class="gallery"></div>
-  </section>
-  <h2 id="shop" class="section-title">Shop All</h2>
-  <div id="products" class="grid"><p class="muted">Loading…</p></div>
-  <dialog id="lightbox" class="lightbox"></dialog>
-  <section id="about" class="card" style="margin-top:48px; display:none"></section>
-</main>
+<main class="container" id="home"><p class="muted center">Loading…</p></main>
+<dialog id="lightbox" class="lightbox"></dialog>
+<footer id="site-footer"></footer>
 <script type="module">
-import { sb, getSettings, renderChrome, esc, money, safeUrl, cart, toast } from "./assets/common.js";
-const s = await getSettings();
+import { sb, getSettings, renderChrome, applyTheme, esc, cart, toast } from "./assets/common.js";
+import { renderSections, newSection } from "./assets/sections.js";
+
+const preview = new URLSearchParams(location.search).has("preview");
+let s = await getSettings();
 renderChrome(s, "shop");
 
-const hero = document.getElementById("hero");
-if (safeUrl(s.hero_image_url)) {
-  hero.classList.add("has-img");
-  hero.style.backgroundImage = `linear-gradient(rgba(0,0,0,.25),rgba(0,0,0,.25)), url("${encodeURI(s.hero_image_url)}")`;
-}
-hero.innerHTML = `<h1>${esc(s.hero_title)}</h1><p>${esc(s.hero_subtitle)}</p>
-  <a class="btn" href="#shop">Shop now</a> <a class="btn secondary" href="custom.html">Request a custom piece</a>
-  <svg class="wave" viewBox="0 0 1200 40" preserveAspectRatio="none" aria-hidden="true"><path fill="currentColor" d="M0,20 C150,45 300,0 450,20 C600,40 750,0 900,20 C1050,40 1150,10 1200,20 L1200,40 L0,40 Z"/></svg>`;
+const q = (t, sel = "*") => sb.from(t).select(sel);
+const [products, categories, gallery, reviews, faqs, patterns] = await Promise.all([
+  q("products").order("sort_order").order("created_at", { ascending: false }),
+  q("categories").order("sort_order").order("name"),
+  q("gallery").order("sort_order").order("created_at", { ascending: false }),
+  q("reviews").eq("visible", true).order("sort_order").order("created_at", { ascending: false }),
+  q("faqs").order("sort_order"),
+  q("patterns", "slug,title,summary,cover_image_url,difficulty,published_at").eq("published", true).order("published_at", { ascending: false }).limit(12),
+]).then((rs) => rs.map((r) => r.data || []));
+const data = { products, categories, gallery, reviews, faqs, patterns, settings: s, preview };
 
-if (s.about_text) {
-  const a = document.getElementById("about");
-  a.style.display = "";
-  a.innerHTML = `<h2>About me</h2><p style="white-space:pre-wrap">${esc(s.about_text)}</p>`;
-}
+// Older setups without saved sections get a sensible default layout.
+const fallback = () => ["hero", "products", "gallery", "shop", "testimonials", "faq"].map(newSection);
 
-const [{ data: products, error }, { data: photos }] = await Promise.all([
-  sb.from("products").select("*").order("sort_order").order("created_at", { ascending: false }),
-  sb.from("gallery").select("*").order("sort_order").order("created_at", { ascending: false }),
-]);
-
-function productCard(p) {
-  const soldOut = p.stock === 0;
-  const img = safeUrl(p.image_url) ? `<img class="img" src="${esc(p.image_url)}" alt="${esc(p.name)}" loading="lazy">` : `<div class="img"></div>`;
-  const stock = p.stock === null ? "Made to order" : soldOut ? "Sold out" : `${p.stock} available`;
-  return `<div class="product">${p.featured ? `<span class="ribbon">★ Best seller</span>` : ""}${img}<div class="body">
-    <h3>${esc(p.name)}</h3><div class="price">${money(p.price_cents)}</div>
-    <div class="desc">${esc(p.description)}</div><div class="stock">${stock}</div>
-    <button class="btn" data-id="${p.id}" ${soldOut ? "disabled" : ""}>${soldOut ? "Sold out" : "Add to cart"}</button>
-  </div></div>`;
+const home = document.getElementById("home");
+function render(sections) {
+  home.innerHTML = renderSections(sections?.length ? sections : fallback(), data) || `<p class="muted center">Nothing here yet.</p>`;
+  const cat = new URLSearchParams(location.search).get("cat");
+  if (cat) filterCat(cat);
 }
-function onAdd(e) {
-  const id = e.target.dataset?.id; if (!id) return;
-  const p = products.find((x) => x.id === id);
-  const inCart = cart.get().find((i) => i.product_id === id)?.quantity || 0;
-  if (p.stock !== null && inCart >= p.stock) return toast(`Only ${p.stock} available`);
-  cart.add(p); toast(`Added ${p.name} to cart`);
+function filterCat(id) {
+  home.querySelectorAll(".chip").forEach((c) => c.classList.toggle("active", c.dataset.cat === id));
+  home.querySelectorAll("[data-cat-item]").forEach((el) => (el.style.display = !id || el.dataset.catItem === id ? "" : "none"));
 }
+render(s.home_sections);
 
-const box = document.getElementById("products");
-if (error) box.innerHTML = `<p class="error">Couldn't load products.</p>`;
-else if (!products.length) box.innerHTML = `<p class="muted">New items coming soon!</p>`;
-else {
-  box.innerHTML = products.map(productCard).join("");
-  box.addEventListener("click", onAdd);
-  const featured = products.filter((p) => p.featured);
-  if (featured.length) {
-    document.getElementById("bestsellers").style.display = "";
-    document.getElementById("bestsellers-title").textContent = s.bestsellers_title || "Best Sellers";
-    const f = document.getElementById("featured");
-    f.innerHTML = featured.map(productCard).join("");
-    f.addEventListener("click", onAdd);
+home.addEventListener("click", (e) => {
+  const add = e.target.closest("[data-add]");
+  if (add) {
+    const p = products.find((x) => x.id === add.dataset.add);
+    if (p.stock !== null && cart.countOf(p.id) >= p.stock) return toast(`Only ${p.stock} available`);
+    cart.add(p); return toast(`Added ${p.name} to cart`);
   }
-}
-
-if (photos?.length) {
-  document.getElementById("gallery-section").style.display = "";
-  document.getElementById("gallery-title").textContent = s.gallery_title || "Recent Makes";
-  const g = document.getElementById("gallery");
-  g.innerHTML = photos.filter((ph) => safeUrl(ph.image_url)).map((ph, i) => `<figure data-i="${i}">
-    <img src="${esc(ph.image_url)}" alt="${esc(ph.caption || "Crochet photo")}" loading="lazy">
-    ${ph.caption ? `<figcaption>${esc(ph.caption)}</figcaption>` : ""}</figure>`).join("");
-  const lb = document.getElementById("lightbox");
-  g.addEventListener("click", (e) => {
-    const fig = e.target.closest("figure"); if (!fig) return;
-    const ph = photos[fig.dataset.i];
-    lb.innerHTML = `<img src="${esc(ph.image_url)}" alt="">${ph.caption ? `<p>${esc(ph.caption)}</p>` : ""}<button class="btn small" autofocus>Close</button>`;
+  const chip = e.target.closest(".chip");
+  if (chip) return filterCat(chip.dataset.cat);
+  const fig = e.target.closest("figure[data-full]");
+  if (fig) {
+    const lb = document.getElementById("lightbox");
+    lb.innerHTML = `<img src="${esc(fig.dataset.full)}" alt="">${fig.dataset.caption ? `<p>${esc(fig.dataset.caption)}</p>` : ""}<button class="btn small" autofocus>Close</button>`;
     lb.querySelector("button").onclick = () => lb.close();
     lb.showModal();
+  }
+});
+document.getElementById("lightbox").addEventListener("click", (e) => { if (e.target.id === "lightbox") e.target.close(); });
+
+// Live preview from the admin Homepage editor
+if (preview) {
+  window.addEventListener("message", (e) => {
+    if (e.origin !== location.origin || e.data?.type !== "preview") return;
+    s = { ...s, ...e.data.settings }; data.settings = s;
+    applyTheme(s); renderChrome(s, "shop", []);
+    render(e.data.sections);
+    if (e.data.scrollTo) document.querySelector(`[data-section="${e.data.scrollTo}"]`)?.scrollIntoView({ behavior: "smooth", block: "start" });
   });
-  lb.addEventListener("click", (e) => { if (e.target === lb) lb.close(); });
+  parent.postMessage({ type: "preview-ready" }, location.origin);
 }
 </script>
-<footer id="site-footer"></footer>
 </body>
 </html>

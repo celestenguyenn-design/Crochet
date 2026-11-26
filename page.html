@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title></title>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<header id="site-header"></header>
+<main class="container article card" id="page" style="margin-top:32px"><p class="muted">Loading…</p></main>
+<script type="module">
+import { sb, getSettings, renderChrome, esc } from "./assets/common.js";
+import { md } from "./assets/sections.js";
+const s = await getSettings();
+const slug = new URLSearchParams(location.search).get("p");
+const { data: pg } = await sb.from("pages").select("*").eq("slug", slug).maybeSingle();
+const el = document.getElementById("page");
+if (pg) { document.title = pg.title; el.innerHTML = `<h1>${esc(pg.title)}</h1><div class="content">${md(pg.body)}</div>`; }
+else el.innerHTML = `<h1>Page not found</h1><p><a href="index.html">← Home</a></p>`;
+renderChrome(s, "");
+</script>
+<footer id="site-footer"></footer>
+</body>
+</html>

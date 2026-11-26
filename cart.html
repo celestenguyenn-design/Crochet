@@ -78,7 +78,7 @@ document.getElementById("form").addEventListener("submit", async (e) => {
   const { data, error } = await sb.rpc("place_order", {
     p_name: f.get("name"), p_email: f.get("email"), p_phone: f.get("phone"),
     p_payment_method: f.get("pay"), p_notes: f.get("notes"),
-    p_items: cart.get().map((i) => ({ product_id: i.product_id, quantity: i.quantity })),
+    p_items: cart.get().map((i) => ({ product_id: i.product_id, quantity: i.quantity, options: i.options || {} })),
   });
   if (error) { err.textContent = error.message; btn.disabled = false; return; }
   cart.clear();

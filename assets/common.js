@@ -56,12 +56,15 @@ export async function getSettings() {
 }
 
 // ---------- Layout ----------
-export function renderChrome(s, active) {
+export function renderChrome(s, active, pages = null) {
   const logo = safeUrl(s.logo_url)
     ? `<img src="${esc(s.logo_url)}" alt="${esc(s.shop_name)}" class="logo-img">`
     : `<span class="logo-text">${esc(s.shop_name)}</span>`;
   const link = (href, label, key) => `<a href="${href}" class="${active === key ? "active" : ""}">${label}</a>`;
-  document.getElementById("site-header").innerHTML = `
+  const annLink = /^(https?:\/\/|#|[a-z0-9_-]+\.html)/i.test(s.announcement_link || "") ? s.announcement_link : "";
+  const ann = s.announcement_enabled && s.announcement_text
+    ? `<div class="announcement">${annLink ? `<a href="${esc(annLink)}">${esc(s.announcement_text)}</a>` : esc(s.announcement_text)}</div>` : "";
+  document.getElementById("site-header").innerHTML = `${ann}
     <div class="container header-inner">
       <a href="index.html" class="logo">${logo}</a>
       <nav>
@@ -75,12 +78,18 @@ export function renderChrome(s, active) {
     safeUrl(s.instagram_url) && `<a href="${esc(s.instagram_url)}" target="_blank" rel="noopener">Instagram</a>`,
     safeUrl(s.tiktok_url) && `<a href="${esc(s.tiktok_url)}" target="_blank" rel="noopener">TikTok</a>`,
   ].filter(Boolean).join(" · ");
-  document.getElementById("site-footer").innerHTML = `
-    <div class="container footer-inner">
+  const footer = document.getElementById("site-footer");
+  const paint = (pg) => {
+    const links = [`<a href="faq.html">FAQ</a>`, ...(pg || []).map((p) => `<a href="page.html?p=${encodeURIComponent(p.slug)}">${esc(p.title)}</a>`)].join(" · ");
+    footer.innerHTML = `<div class="container footer-inner">
       <div>© ${new Date().getFullYear()} ${esc(s.shop_name)}</div>
-      <div>${socials}</div>
-    </div>`;
-  document.title = document.title ? `${document.title} · ${s.shop_name}` : s.shop_name;
+      <div class="footer-links">${links}</div>
+      <div>${socials}</div></div>`;
+  };
+  paint(pages);
+  if (!pages) sb.from("pages").select("slug,title").eq("published", true).eq("show_in_footer", true).order("sort_order").then(({ data }) => paint(data || []));
+  const base = document.documentElement.dataset.baseTitle ??= document.title;
+  document.title = base ? `${base} · ${s.shop_name}` : s.shop_name;
   updateCartCount();
   setupAds(s);
 }
@@ -105,13 +114,22 @@ function setupAds(s) {
 export const cart = {
   get() { try { return JSON.parse(localStorage.getItem("cart")) || []; } catch { return []; } },
   save(items) { localStorage.setItem("cart", JSON.stringify(items)); updateCartCount(); },
-  add(p, qty = 1) {
+  // options: { Size: "Small", Color: "Pink" }. Same product + same options = same cart line.
+  add(p, qty = 1, options = {}) {
     const items = cart.get();
-    const ex = items.find((i) => i.product_id === p.id);
+    const key = p.id + JSON.stringify(options);
+    const ex = items.find((i) => (i.key || i.product_id + "{}") === key);
+    let price = p.price_cents;
+    for (const o of p.options || []) {
+      const v = (o.values || []).find((x) => x.label === options[o.name]);
+      if (v) price += Number(v.price_delta_cents) || 0;
+    }
+    const label = Object.values(options).join(", ");
     if (ex) ex.quantity += qty;
-    else items.push({ product_id: p.id, name: p.name, price_cents: p.price_cents, image_url: p.image_url, quantity: qty });
+    else items.push({ key, product_id: p.id, name: p.name + (label ? ` (${label})` : ""), options, price_cents: price, image_url: p.image_url, quantity: qty });
     cart.save(items);
   },
+  countOf(productId) { return cart.get().filter((i) => i.product_id === productId).reduce((n, i) => n + i.quantity, 0); },
   clear() { cart.save([]); },
 };
 export function updateCartCount() {
