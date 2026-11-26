@@ -43,26 +43,43 @@ Deno.serve(async (req) => {
       const { data: o } = await db.from("orders").update({ notified_at: new Date().toISOString() })
         .eq("id", id).is("notified_at", null).select("*, order_items(*)").maybeSingle();
       if (!o) return Response.json({ skipped: "already notified" });
-      const items = o.order_items.map((i: any) => `<li>${i.quantity} × ${esc(i.name)} (${money(i.price_cents)})</li>`).join("");
       const pm = { zelle: "Zelle", venmo: "Venmo", pickup: "Pay at pickup" }[o.payment_method as string];
-      const disc = o.discount_cents ? `<p>Subtotal ${money(o.subtotal_cents)} · code <b>${esc(o.discount_code)}</b> −${money(o.discount_cents)}</p>` : "";
+      const ship = o.fulfillment === "shipping";
+      const td = "padding:4px 0", tr = (l: string, v: string, b = false) =>
+        `<tr><td style="${td}${b ? ";font-weight:bold;border-top:1px solid #ddd" : ""}">${l}</td><td style="${td};text-align:right${b ? ";font-weight:bold;border-top:1px solid #ddd" : ""}">${v}</td></tr>`;
+      const items = o.order_items.map((i: any) => tr(`<b>${i.quantity} ×</b> ${esc(i.name)}`, money(i.price_cents * i.quantity))).join("");
+      const rest = o.total_cents - (o.deposit_cents || 0);
+      const moneyTable = `<table style="width:100%;border-collapse:collapse;font-size:15px">${items}
+        <tr><td colspan="2" style="height:8px"></td></tr>
+        ${tr("Subtotal", money(o.subtotal_cents ?? o.total_cents))}
+        ${o.discount_cents ? tr(`Discount (${esc(o.discount_code)})`, "−" + money(o.discount_cents)) : ""}
+        ${ship ? tr("Shipping", o.shipping_cents ? money(o.shipping_cents) : "Free") : ""}
+        ${tr("Total", money(o.total_cents), true)}
+        ${o.deposit_cents && rest > 0 ? tr(`Deposit due now`, money(o.deposit_cents)) + tr(ship ? "Rest, before shipping" : "Rest, at pickup", money(rest)) : ""}</table>`;
+      const a = o.ship_address;
+      const addr = ship && a ? `<p><b>📦 Ship to:</b><br>${[a.name, a.line1, a.line2, `${a.city}, ${a.state} ${a.zip}`].filter(Boolean).map(esc).join("<br>")}</p>` : `<p><b>📍 Local pickup</b></p>`;
 
-      await send(OWNER_EMAIL, `🧶 New order #${o.order_number} – ${money(o.total_cents)}`, wrap(s, `
+      await send(OWNER_EMAIL, `🧶 New order #${o.order_number} – ${money(o.total_cents)}${ship ? " (ship)" : " (pickup)"}`, wrap(s, `
         <p><b>${esc(o.customer_name)}</b> placed order <b>#${o.order_number}</b>.</p>
-        <ul>${items}</ul>${disc}<p><b>Total: ${money(o.total_cents)}</b> · ${pm}</p>
+        ${moneyTable}
+        <p style="background:#fde0e0;color:#a32020;padding:8px 12px;border-radius:10px;font-weight:bold">Nothing paid yet — ${o.deposit_cents && rest > 0 ? `waiting for ${money(o.deposit_cents)} deposit` : `waiting for ${money(o.total_cents)}`} by ${pm}</p>
+        ${addr}
         <p>Email: ${esc(o.email)}${o.phone ? `<br>Phone: ${esc(o.phone)}` : ""}</p>
         ${o.customer_notes ? `<p><i>Note:</i> ${esc(o.customer_notes)}</p>` : ""}`), o.email);
 
       if (FROM_EMAIL) {
+        const due = o.deposit_cents || o.total_cents, what = o.deposit_cents && rest > 0 ? "deposit" : "payment";
         let pay = `You'll pay <b>${money(o.total_cents)}</b> at pickup.`;
-        if (o.payment_method === "zelle") pay = `Please send <b>${money(o.total_cents)}</b> via Zelle to <b>${esc(s.zelle_handle)}</b> with <b>Order #${o.order_number}</b> in the memo.`;
-        if (o.payment_method === "venmo") pay = `Please send <b>${money(o.total_cents)}</b> via Venmo to <b>@${esc(String(s.venmo_handle).replace(/^@/, ""))}</b> with <b>Order #${o.order_number}</b> in the note.`;
+        if (o.payment_method === "zelle") pay = `Please send your <b>${money(due)} ${what}</b> by Zelle to <b>${esc(s.zelle_handle)}</b> with <b>Order #${o.order_number}</b> in the memo.`;
+        if (o.payment_method === "venmo") pay = `Please send your <b>${money(due)} ${what}</b> by Venmo to <b>@${esc(String(s.venmo_handle).replace(/^@/, ""))}</b> with <b>Order #${o.order_number}</b> in the note.`;
         await send(o.email, `Your order #${o.order_number} from ${s.shop_name}`, wrap(s, `
           <p>Hi ${esc(o.customer_name)}, thank you for your order! 💕</p>
-          <ul>${items}</ul>${disc}<p><b>Total: ${money(o.total_cents)}</b></p><p>${pay}</p>
-          <p><b>Pickup:</b> ${esc(s.pickup_location)}</p>
-          ${s.pickup_instructions ? `<p>${esc(s.pickup_instructions)}</p>` : ""}
-          <p>I'll let you know when it's ready. Just reply to this email if you have questions!</p>`), OWNER_EMAIL);
+          ${moneyTable}
+          ${o.deposit_cents ? `<p style="background:#fff3cd;padding:8px 12px;border-radius:10px"><b>Your order isn't confirmed until your ${what} is received.</b></p>` : ""}
+          <p>${pay}</p>
+          ${ship ? addr : `<p><b>Pickup:</b> ${esc(s.pickup_location)}</p>${s.pickup_instructions ? `<p>${esc(s.pickup_instructions)}</p>` : ""}`}
+          ${s.order_note ? `<p>⏳ ${esc(s.order_note)}</p>` : ""}
+          <p>Just reply to this email if you have questions!</p>`), OWNER_EMAIL);
       }
       return Response.json({ ok: true });
     }
@@ -74,7 +91,8 @@ Deno.serve(async (req) => {
       await send(OWNER_EMAIL, `✨ New custom request from ${r.name}`, wrap(s, `
         <p><b>${esc(r.name)}</b> (${esc(r.email)}${r.phone ? ", " + esc(r.phone) : ""}) wants:</p>
         <p style="white-space:pre-wrap">${esc(r.description)}</p>
-        <p>${[r.colors && "Colors: " + esc(r.colors), r.size && "Size: " + esc(r.size), r.budget && "Budget: " + esc(r.budget), r.needed_by && "Needed by: " + esc(r.needed_by)].filter(Boolean).join("<br>")}</p>`), r.email);
+        <p>${[r.colors && "Colors: " + esc(r.colors), r.size && "Size: " + esc(r.size), r.budget && "Budget: " + esc(r.budget), r.needed_by && "Needed by: " + esc(r.needed_by)].filter(Boolean).join("<br>")}</p>
+        ${(r.photo_paths || []).length ? `<p>📷 ${r.photo_paths.length} photo${r.photo_paths.length > 1 ? "s" : ""} attached — see the Custom Requests tab in your dashboard.</p>` : ""}`), r.email);
       if (FROM_EMAIL) {
         await send(r.email, `We got your custom request! – ${s.shop_name}`, wrap(s, `
           <p>Hi ${esc(r.name)}, thanks for your custom request! 💕 I'll get back to you soon with a quote.</p>

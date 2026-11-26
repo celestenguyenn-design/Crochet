@@ -346,3 +346,27 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--p
 .photo-previews div { position: relative; }
 .photo-previews img { width: 84px; height: 84px; object-fit: cover; border-radius: 14px; }
 .photo-previews button { position: absolute; top: -6px; right: -6px; background: var(--primary); color: #fff; border: 0; border-radius: 50%; width: 24px; height: 24px; cursor: pointer; }
+
+/* ===== Checkout summary, deposit ===== */
+.row3 { display: grid; grid-template-columns: 2fr 1fr 1.2fr; gap: 0 12px; }
+@media (max-width: 640px) { .row3 { grid-template-columns: 1fr 1fr; } .row3 > div:first-child { grid-column: 1 / -1; } }
+.sum-line { display: flex; justify-content: space-between; gap: 12px; padding: 4px 0; }
+.sum-line.big { font-weight: 700; font-size: 1.15rem; border-top: 1px solid var(--line); margin-top: 4px; padding-top: 8px; }
+.sum-line.good span:last-child { color: #2e8b57; font-weight: 700; }
+.deposit-box { margin-top: 10px; padding: 8px 12px; border-radius: 14px; background: color-mix(in srgb, var(--accent) 25%, transparent); }
+.deposit-box .sum-line.big { border: 0; margin: 0; padding-top: 4px; color: var(--primary); }
+.agree { display: flex; gap: 10px; align-items: flex-start; font-weight: 400; background: color-mix(in srgb, var(--primary) 8%, transparent);
+  border: 2px solid color-mix(in srgb, var(--primary) 35%, transparent); border-radius: 14px; padding: 10px 12px; margin: 14px 0 6px; cursor: pointer; }
+.agree input { margin-top: 4px; }
+.deposit-alert { background: #fff3cd; color: #7a5200; border-radius: 12px; padding: 10px 12px; font-weight: 600; }
+
+/* ===== Side tab for the sign-up offer ===== */
+.signup-tab { position: fixed; left: 0; top: 50%; z-index: 40; transform: translateY(-50%) rotate(180deg); writing-mode: vertical-rl;
+  background: var(--primary); color: #fff; border: 0; border-radius: 0 14px 14px 0; padding: 14px 9px; font: 700 .9rem var(--font-body);
+  cursor: pointer; box-shadow: var(--shadow); letter-spacing: .5px; transition: padding .2s; }
+.signup-tab { border-radius: 14px 0 0 14px; }
+.signup-tab:hover { padding-right: 13px; }
+@media (max-width: 640px) {
+  .signup-tab { top: auto; bottom: 18px; transform: none; writing-mode: horizontal-tb; border-radius: 999px; left: 12px; padding: 9px 14px; font-size: .85rem; }
+}
+@media print { .signup-tab { display: none; } }

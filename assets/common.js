@@ -110,41 +110,60 @@ const ICONS = {
   tiktok: `<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M16.6 2h-3.3v13.2a2.9 2.9 0 1 1-2.9-2.9c.3 0 .6 0 .9.1V9a6.3 6.3 0 1 0 5.3 6.2V8.6a7.9 7.9 0 0 0 4.4 1.4V6.7a4.6 4.6 0 0 1-4.4-4.7z"/></svg>`,
 };
 
-// ---------- "10% off" sign-up pop-up ----------
+// ---------- "10% off" sign-up pop-up + side tab ----------
+// The pop-up opens once by itself for new visitors. After it's closed, a small side tab stays on screen
+// so people can open it again any time. Once someone signs up, the tab shows their code instead.
 function setupSignupPopup(s) {
-  if (!s.signup_popup_enabled || document.getElementById("signup-pop")) return;
-  if (/(admin|cart|order)\.html$/.test(location.pathname) || location.search.includes("preview")) return;
+  if (!s.signup_popup_enabled || document.getElementById("signup-tab")) return;
+  if (/(admin)\.html$/.test(location.pathname) || location.search.includes("preview")) return;
+  const joined = localStorage.getItem("signup_joined") === "1";
+  const tab = document.createElement("button");
+  tab.id = "signup-tab"; tab.className = "signup-tab";
+  const paintTab = () => { tab.innerHTML = localStorage.getItem("signup_joined") === "1" ? "🎁 Your code" : `🎁 ${esc(offerShort(s))}`; };
+  paintTab();
+  tab.onclick = () => openSignupPopup(s, paintTab);
+  document.body.appendChild(tab);
+  if (joined || /(cart|order)\.html$/.test(location.pathname)) return;
   const seen = Number(localStorage.getItem("signup_popup_seen") || 0);
-  if (Date.now() - seen < 14 * 864e5) return; // don't nag: at most once every 2 weeks
-  setTimeout(() => {
-    const d = document.createElement("dialog");
-    d.id = "signup-pop"; d.className = "signup-pop";
-    d.innerHTML = `<button class="pop-close" aria-label="Close">✕</button>
-      ${safeUrl(s.logo_url) ? `<img class="pop-logo" src="${esc(s.logo_url)}" alt="${esc(s.shop_name)}">` : `<div class="pop-name">${esc(s.shop_name)}</div>`}
-      <h2>${esc(s.signup_offer_title)}</h2><p>${esc(s.signup_offer_text)}</p>
-      <form class="pop-form"><input type="email" required placeholder="you@email.com" aria-label="Email"><button class="btn">Get my code</button></form>
-      <button class="pop-skip">No thanks</button>`;
-    document.body.appendChild(d);
-    const close = () => { localStorage.setItem("signup_popup_seen", Date.now()); d.close(); };
-    d.querySelector(".pop-close").onclick = close;
-    d.querySelector(".pop-skip").onclick = close;
-    d.addEventListener("click", (e) => { if (e.target === d) close(); });
-    d.addEventListener("cancel", close);
-    d.querySelector("form").addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const btn = e.target.querySelector("button"); btn.disabled = true;
-      const { error } = await sb.from("subscribers").insert({ email: e.target.querySelector("input").value.trim(), source: "popup" });
-      if (error && error.code !== "23505") { toast("Hmm, check your email address."); btn.disabled = false; return; }
-      localStorage.setItem("signup_popup_seen", Date.now() + 3650 * 864e5);
-      const code = esc(s.signup_offer_code || "");
-      e.target.outerHTML = code
-        ? `<p class="pop-thanks">You're in! 💕 Use this code at checkout:</p><button class="pop-code" title="Tap to copy">${code}</button><p class="muted" style="font-size:.85rem">Tap the code to copy it. Good for your first order.</p>`
-        : `<p class="pop-thanks">You're on the list! 💌</p>`;
-      d.querySelector(".pop-skip").textContent = "Start shopping";
-      d.querySelector(".pop-code")?.addEventListener("click", async () => { try { await navigator.clipboard.writeText(s.signup_offer_code); toast("Code copied!"); } catch {} });
-    });
-    d.showModal();
-  }, 6000);
+  if (Date.now() - seen < 14 * 864e5) return; // auto-open at most once every 2 weeks
+  setTimeout(() => { if (!document.querySelector("dialog[open]")) openSignupPopup(s, paintTab); }, 6000);
+}
+const offerShort = (s) => (s.signup_offer_title || "").match(/\d+\s*%\s*off/i)?.[0] || "Get a discount";
+function openSignupPopup(s, paintTab) {
+  document.getElementById("signup-pop")?.remove();
+  const d = document.createElement("dialog");
+  d.id = "signup-pop"; d.className = "signup-pop";
+  const code = esc(s.signup_offer_code || "");
+  const codeHtml = code
+    ? `<p class="pop-thanks">You're in! 💕 Use this code at checkout:</p><button class="pop-code" title="Tap to copy">${code}</button><p class="muted" style="font-size:.85rem">Tap the code to copy it. Good for your first order.</p>`
+    : `<p class="pop-thanks">You're on the list! 💌</p>`;
+  const joined = localStorage.getItem("signup_joined") === "1";
+  d.innerHTML = `<button class="pop-close" aria-label="Close">✕</button>
+    ${safeUrl(s.logo_url) ? `<img class="pop-logo" src="${esc(s.logo_url)}" alt="${esc(s.shop_name)}">` : `<div class="pop-name">${esc(s.shop_name)}</div>`}
+    <h2>${esc(s.signup_offer_title)}</h2>
+    ${joined ? codeHtml : `<p>${esc(s.signup_offer_text)}</p>
+    <form class="pop-form"><input type="email" required placeholder="you@email.com" aria-label="Email"><button class="btn">Get my code</button></form>`}
+    <button class="pop-skip">${joined ? "Keep shopping" : "No thanks"}</button>`;
+  document.body.appendChild(d);
+  const wireCode = () => d.querySelector(".pop-code")?.addEventListener("click", async () => { try { await navigator.clipboard.writeText(s.signup_offer_code); toast("Code copied!"); } catch {} });
+  wireCode();
+  const close = () => { localStorage.setItem("signup_popup_seen", Date.now()); d.close(); d.remove(); };
+  d.querySelector(".pop-close").onclick = close;
+  d.querySelector(".pop-skip").onclick = close;
+  d.addEventListener("click", (e) => { if (e.target === d) close(); });
+  d.addEventListener("cancel", close);
+  d.querySelector("form")?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const btn = e.target.querySelector("button"); btn.disabled = true;
+    const { error } = await sb.from("subscribers").insert({ email: e.target.querySelector("input").value.trim(), source: "popup" });
+    if (error && error.code !== "23505") { toast("Hmm, check your email address."); btn.disabled = false; return; }
+    localStorage.setItem("signup_joined", "1");
+    e.target.previousElementSibling?.remove();
+    e.target.outerHTML = codeHtml;
+    d.querySelector(".pop-skip").textContent = "Start shopping";
+    wireCode(); paintTab?.();
+  });
+  d.showModal();
 }
 
 // ---------- Visitor stats (GoatCounter, no cookies) ----------

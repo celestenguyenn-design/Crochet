@@ -58,6 +58,24 @@
   @media (max-width: 960px) { .hp-preview { position: static; } #hp-frame { height: 70vh; } }
   .req-photos { display: flex; gap: 10px; flex-wrap: wrap; margin: 6px 0 10px; }
   .req-photos img { width: 110px; height: 110px; object-fit: cover; border-radius: 12px; }
+  .order-top { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; align-items: flex-start; }
+  .paybadge { display: inline-block; font-weight: 800; letter-spacing: .5px; padding: 6px 14px; border-radius: 999px; margin: 10px 0 4px; font-size: .9rem; }
+  .paybadge.green { background: #c8ecd0; color: #1d6b31; } .paybadge.yellow { background: #fff0c2; color: #7a5600; }
+  .paybadge.red { background: #fde0e0; color: #a32020; } .paybadge.grey { background: var(--line); }
+  .order-grid { display: grid; grid-template-columns: 1.2fr 1fr; gap: 24px; }
+  @media (max-width: 760px) { .order-grid { grid-template-columns: 1fr; gap: 6px; } }
+  .order h4 { margin: 14px 0 6px; font-size: .8rem; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); }
+  .order .sum-line { display: flex; justify-content: space-between; gap: 12px; padding: 3px 0; }
+  .order .sum-line.big { font-weight: 800; border-top: 1px solid var(--line); margin-top: 4px; padding-top: 6px; }
+  .order .sum-line.good span:last-child { color: #2e8b57; font-weight: 700; } .order .sum-line.owe span:last-child { color: #a32020; font-weight: 800; }
+  .order-items .sum-line { border-bottom: 1px dashed var(--line); }
+  .addr { white-space: pre-wrap; background: var(--bg); border-radius: 12px; padding: 10px 12px; font-family: inherit; }
+  .cust-note { background: var(--bg); border-radius: 12px; padding: 8px 12px; }
+  .order.cancelled { opacity: .55; }
+  .quick { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
+  .order-edit { margin-top: 12px; } .order-edit summary { font-weight: 700; color: var(--primary); }
+  .btn.pirate { background: #1e4f86; box-shadow: none; }
+  .pre-table { width: 100%; }
   .gal-admin { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
   .gal-admin img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 12px; }
   dialog { border: 0; border-radius: var(--radius); padding: 0; width: min(760px, 95vw); background: var(--bg); color: var(--text); }
@@ -78,6 +96,7 @@
   <div id="app" style="display:none">
     <div class="tabs" id="tabs">
       <button data-tab="orders" class="active">Orders</button>
+      <button data-tab="preorders">Pre-orders</button>
       <button data-tab="requests">Custom Requests</button>
       <button data-tab="messages">Messages</button>
       <button data-tab="products">Products</button>
@@ -91,6 +110,7 @@
       <button data-tab="settings">Payment &amp; Pickup</button>
     </div>
     <section id="tab-orders"></section>
+    <section id="tab-preorders" hidden></section>
     <section id="tab-requests" hidden></section>
     <section id="tab-messages" hidden></section>
     <section id="tab-products" hidden></section>
@@ -136,7 +156,7 @@ $("login").addEventListener("submit", async (e) => {
 $("logout").addEventListener("click", async (e) => { e.preventDefault(); await sb.auth.signOut(); boot(); });
 
 // ---------- Tabs ----------
-const loaders = { orders: loadOrders, requests: loadRequests, messages: loadMessages, products: loadProducts, homepage: loadHomepage, gallery: loadGallery, reviews: loadReviews, pages: loadPages, marketing: loadMarketing, patterns: loadPatterns, appearance: loadAppearance, settings: loadSettings };
+const loaders = { orders: loadOrders, requests: loadRequests, preorders: loadPreorders, messages: loadMessages, products: loadProducts, homepage: loadHomepage, gallery: loadGallery, reviews: loadReviews, pages: loadPages, marketing: loadMarketing, patterns: loadPatterns, appearance: loadAppearance, settings: loadSettings };
 function showTab(name) {
   document.querySelectorAll("#tabs button").forEach((b) => b.classList.toggle("active", b.dataset.tab === name));
   document.querySelectorAll("#app > section").forEach((s) => (s.hidden = s.id !== "tab-" + name));
@@ -166,55 +186,201 @@ const imgField = (name, label, value) => `<label>${label}</label>
   <input type="file" accept="image/*" data-target="${name}" style="margin-top:6px">`;
 
 // ---------- Orders ----------
-const ORDER_STATUSES = ["new", "in_progress", "ready", "picked_up", "cancelled"];
+const ORDER_STATUSES = ["new", "in_progress", "ready", "shipped", "picked_up", "cancelled"];
+const STATUS_LABEL = { new: "New", in_progress: "Being made", ready: "Ready", shipped: "Shipped", picked_up: "Picked up", cancelled: "Cancelled" };
+const PAY_LABEL = { unpaid: "Nothing paid yet", deposit_paid: "Deposit paid", paid: "Paid in full", refunded: "Refunded" };
 const label = (s) => s.replace("_", " ").replace(/^\w/, (c) => c.toUpperCase());
+const isDone = (o) => ["picked_up", "shipped", "cancelled"].includes(o.status);
+const owedOf = (o) => Math.max(0, o.total_cents - (o.amount_paid_cents || 0));
+const addrText = (a) => a ? [a.name, a.line1, a.line2, `${a.city}, ${a.state} ${a.zip}`].filter(Boolean).join("\n") : "";
 let orderFilter = "open";
 async function loadOrders() {
   const el = $("tab-orders");
   const { data: orders, error } = await sb.from("orders").select("*, order_items(*)").order("created_at", { ascending: false }).limit(500);
   if (error) { el.innerHTML = `<p class="error">${esc(error.message)}</p>`; return; }
-  const paid = orders.filter((o) => o.payment_status === "paid");
-  const open = orders.filter((o) => !["picked_up", "cancelled"].includes(o.status));
-  const shown = orders.filter((o) => orderFilter === "all" ? true : orderFilter === "open" ? !["picked_up", "cancelled"].includes(o.status) : orderFilter === "unpaid" ? o.payment_status === "unpaid" && o.status !== "cancelled" : o.status === orderFilter);
+  const live = orders.filter((o) => o.status !== "cancelled");
+  const FILTERS = {
+    open: ["Open orders", (o) => !isDone(o)],
+    deposit: ["Waiting for deposit", (o) => o.payment_status === "unpaid" && o.status !== "cancelled"],
+    owing: ["Still owes money", (o) => o.status !== "cancelled" && o.payment_status !== "refunded" && owedOf(o) > 0],
+    toship: ["To ship", (o) => o.fulfillment === "shipping" && !isDone(o)],
+    ...Object.fromEntries(ORDER_STATUSES.map((s) => [s, [STATUS_LABEL[s], (o) => o.status === s]])),
+    all: ["All orders", () => true],
+  };
+  const shown = orders.filter(FILTERS[orderFilter][1]);
   el.innerHTML = `
     <div class="stats">
-      <div class="card"><b>${open.length}</b>Open orders</div>
-      <div class="card"><b>${orders.filter((o) => o.payment_status === "unpaid" && o.status !== "cancelled").length}</b>Awaiting payment</div>
-      <div class="card"><b>${money(paid.reduce((t, o) => t + o.total_cents, 0))}</b>Total paid</div>
+      <div class="card"><b>${orders.filter(FILTERS.open[1]).length}</b>Open orders</div>
+      <div class="card"><b>${orders.filter(FILTERS.deposit[1]).length}</b>Waiting for deposit</div>
+      <div class="card"><b>${orders.filter(FILTERS.toship[1]).length}</b>To ship</div>
+      <div class="card"><b>${money(live.reduce((t, o) => t + (o.amount_paid_cents || 0), 0))}</b>Received</div>
+      <div class="card"><b>${money(live.filter((o) => o.payment_status !== "refunded").reduce((t, o) => t + owedOf(o), 0))}</b>Still owed to you</div>
     </div>
-    <div class="filters"><select id="of">
-      ${[["open", "Open orders"], ["unpaid", "Unpaid"], ...ORDER_STATUSES.map((s) => [s, label(s)]), ["all", "All orders"]].map(([v, l]) => `<option value="${v}" ${v === orderFilter ? "selected" : ""}>${l}</option>`).join("")}
-    </select></div>
+    <div class="filters"><select id="of">${Object.entries(FILTERS).map(([k, [l]]) => `<option value="${k}" ${k === orderFilter ? "selected" : ""}>${l}</option>`).join("")}</select></div>
     <div class="list">${shown.length ? shown.map(orderCard).join("") : `<p class="muted">No orders here.</p>`}</div>`;
   $("of").onchange = (e) => { orderFilter = e.target.value; loadOrders(); };
-  el.querySelectorAll("[data-save-order]").forEach((b) => b.onclick = async () => {
-    const card = b.closest(".card"), id = b.dataset.saveOrder;
-    const { error } = await sb.from("orders").update({
-      status: card.querySelector("[name=status]").value,
-      payment_status: card.querySelector("[name=payment_status]").value,
-      admin_notes: card.querySelector("[name=admin_notes]").value,
-    }).eq("id", id);
+  const save = async (id, patch) => {
+    const { error } = await sb.from("orders").update(patch).eq("id", id);
     toast(error ? error.message : "Saved"); if (!error) loadOrders();
+  };
+  el.querySelectorAll(".order").forEach((card) => {
+    const o = orders.find((x) => x.id === card.dataset.id);
+    card.querySelector("[data-act=deposit]")?.addEventListener("click", () => save(o.id, { payment_status: "deposit_paid", amount_paid_cents: o.deposit_cents, status: o.status === "new" ? "in_progress" : o.status }));
+    card.querySelector("[data-act=full]")?.addEventListener("click", () => save(o.id, { payment_status: "paid", amount_paid_cents: o.total_cents }));
+    card.querySelector("[data-act=copy]")?.addEventListener("click", async () => { await navigator.clipboard.writeText(addrText(o.ship_address)); toast("Address copied — paste it into Pirate Ship"); });
+    card.querySelector("[data-act=save]").addEventListener("click", () => {
+      const v = (n) => card.querySelector(`[name=${n}]`)?.value;
+      save(o.id, { status: v("status"), payment_status: v("payment_status"), amount_paid_cents: toCents(v("amount_paid")),
+        admin_notes: v("admin_notes"), ...(card.querySelector("[name=tracking]") ? { tracking_number: v("tracking").trim() } : {}) });
+    });
   });
 }
 function orderCard(o) {
   const pm = { zelle: "Zelle", venmo: "Venmo", pickup: "Pay at pickup" }[o.payment_method];
-  return `<div class="card">
-    <div class="head"><h3>#${o.order_number} · ${esc(o.customer_name)}</h3>
-      <span><span class="pill ${o.payment_status}">${label(o.payment_status)}</span> <span class="pill">${label(o.status)}</span></span></div>
-    <div class="muted">${fmtDate(o.created_at)} · ${esc(o.email)} ${o.phone ? "· " + esc(o.phone) : ""} · ${pm}</div>
-    <ul>${o.order_items.map((i) => `<li>${i.quantity} × ${esc(i.name)} (${money(i.price_cents)})</li>`).join("")}</ul>
-    ${o.discount_cents ? `<div class="muted">Subtotal ${money(o.subtotal_cents)} · code <b>${esc(o.discount_code)}</b> −${money(o.discount_cents)}</div>` : ""}
-    <b>Total: ${money(o.total_cents)}</b>
-    ${o.customer_notes ? `<p><i>Customer note:</i> ${esc(o.customer_notes)}</p>` : ""}
-    <div class="inline">
-      <div><label>Order status</label><select name="status">${ORDER_STATUSES.map((s) => `<option value="${s}" ${s === o.status ? "selected" : ""}>${label(s)}</option>`).join("")}</select></div>
-      <div><label>Payment</label><select name="payment_status">${["unpaid", "paid", "refunded"].map((s) => `<option value="${s}" ${s === o.payment_status ? "selected" : ""}>${label(s)}</option>`).join("")}</select></div>
+  const owed = owedOf(o), paidAmt = o.amount_paid_cents || 0;
+  const badge = o.payment_status === "refunded" ? `<div class="paybadge grey">REFUNDED</div>`
+    : owed === 0 && o.total_cents > 0 ? `<div class="paybadge green">✓ PAID IN FULL</div>`
+    : paidAmt > 0 ? `<div class="paybadge yellow">PARTLY PAID · OWES ${money(owed)}</div>`
+    : `<div class="paybadge red">NOTHING PAID · ${o.deposit_cents && o.deposit_cents < o.total_cents ? `${money(o.deposit_cents)} DEPOSIT DUE` : `${money(o.total_cents)} DUE`}</div>`;
+  const row = (l, v, cls = "") => `<div class="sum-line ${cls}"><span>${l}</span><span>${v}</span></div>`;
+  const ship = o.fulfillment === "shipping";
+  return `<div class="card order ${o.status === "cancelled" ? "cancelled" : ""}" data-id="${o.id}">
+    <div class="order-top">
+      <div><h3 style="margin:0">#${o.order_number} · ${esc(o.customer_name)}</h3>
+        <div class="muted" style="font-size:.9rem">${fmtDate(o.created_at)}</div></div>
+      <div style="text-align:right"><span class="pill">${ship ? "📦 Ship" : "📍 Pickup"}</span> <span class="pill">${STATUS_LABEL[o.status]}</span></div>
     </div>
-    <label>Private notes</label><input name="admin_notes" value="${esc(o.admin_notes)}">
-    <div class="inline"><button class="btn small" data-save-order="${o.id}">Save</button>
+    ${badge}
+    <div class="order-grid">
+      <div>
+        <h4>Items</h4>
+        <div class="order-items">${o.order_items.map((i) => row(`<b>${i.quantity} ×</b> ${esc(i.name)}`, money(i.price_cents * i.quantity))).join("")}</div>
+        <h4>Money</h4>
+        ${row("Subtotal", money(o.subtotal_cents ?? o.total_cents))}
+        ${o.discount_cents ? row(`Discount code <b>${esc(o.discount_code)}</b>`, "−" + money(o.discount_cents), "good") : ""}
+        ${ship ? row("Shipping", o.shipping_cents ? money(o.shipping_cents) : "Free") : ""}
+        ${row("Total", money(o.total_cents), "big")}
+        ${o.deposit_cents && o.deposit_cents < o.total_cents ? row(`Deposit required`, money(o.deposit_cents)) : ""}
+        ${row("Paid so far", money(paidAmt))}
+        ${row("Still owed", money(owed), owed ? "owe" : "good")}
+        <div class="muted" style="font-size:.85rem; margin-top:4px">Paying by ${pm}</div>
+      </div>
+      <div>
+        <h4>Customer</h4>
+        <div>${esc(o.customer_name)}</div>
+        <div><a href="mailto:${encodeURIComponent(o.email)}?subject=${encodeURIComponent(`Your order #${o.order_number}`)}">${esc(o.email)}</a></div>
+        ${o.phone ? `<div><a href="tel:${esc(o.phone)}">${esc(o.phone)}</a></div>` : ""}
+        ${o.customer_notes ? `<p class="cust-note">💬 ${esc(o.customer_notes)}</p>` : ""}
+        ${ship ? `<h4>Ship to</h4><div class="addr">${esc(addrText(o.ship_address))}</div>
+          <div class="inline" style="margin-top:8px"><button class="btn small secondary" data-act="copy">📋 Copy address</button>
+          <a class="btn small pirate" href="https://ship.pirateship.com/" target="_blank" rel="noopener">🏴‍☠️ Open Pirate Ship</a></div>
+          <label>Tracking number</label><input name="tracking" value="${esc(o.tracking_number)}" placeholder="Paste from Pirate Ship">` : ""}
+      </div>
+    </div>
+    ${o.payment_status !== "paid" && o.status !== "cancelled" ? `<div class="inline quick">
+      ${o.payment_status === "unpaid" && o.deposit_cents && o.deposit_cents < o.total_cents ? `<button class="btn small" data-act="deposit">✓ Deposit received (${money(o.deposit_cents)})</button>` : ""}
+      <button class="btn small" data-act="full">✓ Paid in full (${money(o.total_cents)})</button></div>` : ""}
+    <details class="order-edit"><summary>Update status, payment & notes</summary>
+      <div class="inline">
+        <div><label>Order status</label><select name="status">${ORDER_STATUSES.map((s) => `<option value="${s}" ${s === o.status ? "selected" : ""}>${STATUS_LABEL[s]}</option>`).join("")}</select></div>
+        <div><label>Payment</label><select name="payment_status">${Object.entries(PAY_LABEL).map(([k, l]) => `<option value="${k}" ${k === o.payment_status ? "selected" : ""}>${l}</option>`).join("")}</select></div>
+        <div style="max-width:140px"><label>Amount paid ($)</label><input name="amount_paid" type="number" step="0.01" min="0" value="${(paidAmt / 100).toFixed(2)}"></div>
+      </div>
+      <label>Private notes</label><input name="admin_notes" value="${esc(o.admin_notes)}">
+    </details>
+    <div class="inline"><button class="btn small" data-act="save">Save</button>
       <a class="btn small secondary" href="mailto:${encodeURIComponent(o.email)}?subject=${encodeURIComponent(`Your order #${o.order_number}`)}">Email customer</a></div>
   </div>`;
+}
+
+// ---------- Pre-orders (private work queue) ----------
+const PRE_STATUS = { waiting: "Waiting", in_progress: "Making it", ready: "Ready", delivered: "Delivered" };
+let preShowDone = false;
+async function loadPreorders() {
+  const el = $("tab-preorders");
+  const { data, error } = await sb.from("preorders").select("*").order("position").order("created_at");
+  if (error) { el.innerHTML = `<p class="error">${esc(error.message)}</p>`; return; }
+  const list = data.filter((p) => preShowDone || p.status !== "delivered");
+  const owedOf = (p) => p.paid_in_full ? 0 : p.total_cents != null ? Math.max(0, p.total_cents - p.paid_cents) : null;
+  const badge = (p) => p.paid_in_full ? `<span class="paybadge green">✓ PAID IN FULL</span>`
+    : p.paid_cents > 0 ? `<span class="paybadge yellow">PAID ${money(p.paid_cents)}${owedOf(p) != null ? ` · OWES ${money(owedOf(p))}` : ""}</span>`
+    : `<span class="paybadge red">NOT PAID</span>`;
+  el.innerHTML = `<div class="head"><p class="muted" style="margin:0">Your private work list, in order. Only you can see this.
+      Use ↑ ↓ to change the order.</p><button class="btn small" id="new-pre">+ Add pre-order</button></div>
+    <label style="font-weight:400"><input type="checkbox" id="pre-done" ${preShowDone ? "checked" : ""}>Show delivered</label>
+    <div class="stats" style="margin-top:12px">
+      <div class="card"><b>${data.filter((p) => p.status !== "delivered").length}</b>To make</div>
+      <div class="card"><b>${data.filter((p) => !p.paid_in_full && p.status !== "delivered").length}</b>Not fully paid</div>
+      <div class="card"><b>${data.filter((p) => p.needs_shipping && p.status !== "delivered").length}</b>To ship</div>
+    </div>
+    <div class="list">${list.map((p, i) => `<div class="card order" data-id="${p.id}">
+      <div class="order-top"><h3 style="margin:0">${i + 1}. ${esc(p.customer_name)} ${p.source ? `<span class="pill">${esc(p.source)}</span>` : ""}</h3>
+        <span class="hp-actions"><button data-up ${i === 0 ? "disabled" : ""}>↑</button><button data-down ${i === list.length - 1 ? "disabled" : ""}>↓</button></span></div>
+      ${badge(p)} <span class="pill">${PRE_STATUS[p.status]}</span> ${p.needs_shipping ? `<span class="pill">📦 Ship${p.shipping_paid ? "" : " · shipping not paid"}</span>` : ""}
+      <div class="order-grid">
+        <div><h4>Making</h4><div style="white-space:pre-wrap; font-weight:600">${esc(p.items)}</div>
+          ${p.pattern_notes ? `<h4>Pattern (just for you)</h4><div style="white-space:pre-wrap">${esc(p.pattern_notes)}</div>` : ""}
+          ${p.notes ? `<h4>Notes</h4><div style="white-space:pre-wrap">${esc(p.notes)}</div>` : ""}</div>
+        <div><h4>Payment</h4><div>${esc(p.payment_note)}</div>
+          ${p.contact ? `<h4>Contact</h4><div><a href="${/@/.test(p.contact) ? "mailto:" : "tel:"}${esc(p.contact)}">${esc(p.contact)}</a></div>` : ""}
+          ${p.needs_shipping && p.shipping_address ? `<h4>Ship to</h4><div class="addr">${esc(p.customer_name)}\n${esc(p.shipping_address)}</div>
+            <div class="inline" style="margin-top:8px"><button class="btn small secondary" data-copy>📋 Copy address</button>
+            <a class="btn small pirate" href="https://ship.pirateship.com/" target="_blank" rel="noopener">🏴‍☠️ Pirate Ship</a></div>` : ""}</div>
+      </div>
+      <div class="inline quick">
+        <select data-status style="max-width:180px">${Object.entries(PRE_STATUS).map(([k, l]) => `<option value="${k}" ${k === p.status ? "selected" : ""}>${l}</option>`).join("")}</select>
+        ${!p.paid_in_full ? `<button class="btn small" data-paid>✓ Paid in full</button>` : ""}
+        <button class="btn small secondary" data-edit>Edit</button></div>
+    </div>`).join("") || `<p class="muted">No pre-orders.</p>`}</div>`;
+  $("pre-done").onchange = (e) => { preShowDone = e.target.checked; loadPreorders(); };
+  $("new-pre").onclick = () => preDialog({ position: (data.at(-1)?.position || 0) + 1, paid_cents: 0, status: "waiting" });
+  const upd = async (id, patch) => { const { error } = await sb.from("preorders").update(patch).eq("id", id); toast(error ? error.message : "Saved"); loadPreorders(); };
+  el.querySelectorAll(".order").forEach((card) => {
+    const p = data.find((x) => x.id === card.dataset.id), idx = list.indexOf(p);
+    const swap = async (other) => {
+      const order = [...data], a = order.indexOf(p), b = order.indexOf(other);
+      [order[a], order[b]] = [order[b], order[a]];
+      await Promise.all(order.map((x, i) => x.position !== i + 1 ? sb.from("preorders").update({ position: i + 1 }).eq("id", x.id) : null));
+      loadPreorders();
+    };
+    card.querySelector("[data-up]").onclick = () => swap(list[idx - 1]);
+    card.querySelector("[data-down]").onclick = () => swap(list[idx + 1]);
+    card.querySelector("[data-status]").onchange = (e) => upd(p.id, { status: e.target.value });
+    card.querySelector("[data-paid]")?.addEventListener("click", () => upd(p.id, { paid_in_full: true, paid_cents: p.total_cents ?? p.paid_cents, payment_note: "Paid in full", shipping_paid: true }));
+    card.querySelector("[data-edit]").onclick = () => preDialog(p);
+    card.querySelector("[data-copy]")?.addEventListener("click", async () => { await navigator.clipboard.writeText(`${p.customer_name}\n${p.shipping_address}`); toast("Address copied"); });
+  });
+}
+function preDialog(p) {
+  const d = $("dlg");
+  d.innerHTML = `<form method="dialog"><h2>${p.id ? "Edit" : "New"} pre-order</h2>
+    <div class="row"><div><label>Customer *</label><input name="customer_name" required value="${esc(p.customer_name)}"></div>
+      <div><label>Where they ordered</label><input name="source" value="${esc(p.source)}" placeholder="Facebook, Etsy, friend…"></div></div>
+    <label>Contact (phone or email)</label><input name="contact" value="${esc(p.contact)}">
+    <label>What they want *</label><textarea name="items" required style="min-height:70px">${esc(p.items)}</textarea>
+    <label>Pattern notes (private)</label><textarea name="pattern_notes" style="min-height:60px">${esc(p.pattern_notes)}</textarea>
+    <div class="row"><div><label>Total price ($, if known)</label><input name="total" type="number" step="0.01" min="0" value="${p.total_cents != null ? (p.total_cents / 100).toFixed(2) : ""}"></div>
+      <div><label>Paid so far ($)</label><input name="paid" type="number" step="0.01" min="0" value="${((p.paid_cents || 0) / 100).toFixed(2)}"></div></div>
+    <label style="font-weight:400"><input type="checkbox" name="paid_in_full" ${p.paid_in_full ? "checked" : ""}>Paid in full</label>
+    <label>Payment note</label><input name="payment_note" value="${esc(p.payment_note)}" placeholder="e.g. Paid half on Venmo">
+    <label style="font-weight:400"><input type="checkbox" name="needs_shipping" ${p.needs_shipping ? "checked" : ""}>Needs shipping</label>
+    <label style="font-weight:400"><input type="checkbox" name="shipping_paid" ${p.shipping_paid ? "checked" : ""}>Shipping paid</label>
+    <label>Shipping address</label><textarea name="shipping_address" style="min-height:60px">${esc(p.shipping_address)}</textarea>
+    <label>Other notes</label><textarea name="notes" style="min-height:60px">${esc(p.notes)}</textarea>
+    <div class="inline"><button class="btn" value="save">Save</button><button class="btn secondary" value="cancel" formnovalidate>Cancel</button>
+    ${p.id ? `<button class="btn danger" value="delete" formnovalidate style="margin-left:auto">Delete</button>` : ""}</div></form>`;
+  d.returnValue = ""; d.showModal();
+  d.onclose = async () => {
+    const f = new FormData(d.querySelector("form"));
+    if (d.returnValue === "delete") { if (confirm("Delete this pre-order?")) { await sb.from("preorders").delete().eq("id", p.id); loadPreorders(); } return; }
+    if (d.returnValue !== "save") return;
+    const row = { customer_name: f.get("customer_name"), source: f.get("source"), contact: f.get("contact"), items: f.get("items"), pattern_notes: f.get("pattern_notes"),
+      total_cents: f.get("total") === "" ? null : toCents(f.get("total")), paid_cents: toCents(f.get("paid")), paid_in_full: f.get("paid_in_full") === "on",
+      payment_note: f.get("payment_note"), needs_shipping: f.get("needs_shipping") === "on", shipping_paid: f.get("shipping_paid") === "on",
+      shipping_address: f.get("shipping_address"), notes: f.get("notes"), position: p.position ?? 0 };
+    const { error } = p.id ? await sb.from("preorders").update(row).eq("id", p.id) : await sb.from("preorders").insert(row);
+    toast(error ? error.message : "Saved"); loadPreorders();
+  };
 }
 
 // ---------- Custom requests ----------
@@ -809,7 +975,15 @@ function loadSettings() {
     <h2>Payment options</h2><p class="muted">Leave a handle blank to hide that option at checkout. Customers see these after they order, along with their order number to put in the memo.</p>
     <div class="row"><div><label>Zelle (email or phone)</label><input name="zelle_handle" value="${esc(s.zelle_handle)}"></div>
       <div><label>Venmo username</label><input name="venmo_handle" value="${esc(s.venmo_handle)}" placeholder="@yourname"></div></div>
-    <label style="font-weight:400"><input type="checkbox" name="allow_pay_at_pickup" ${s.allow_pay_at_pickup ? "checked" : ""}>Allow "Pay at pickup"</label>
+    <label>Deposit required (% of the total, paid before you start)</label>
+    <input name="deposit_percent" type="number" min="0" max="100" value="${s.deposit_percent ?? 50}">
+    <p class="muted" style="font-size:.9rem">50 = half up front, the rest at pickup/before shipping. 100 = pay everything up front. 0 = no deposit (then "Pay at pickup" can be offered).</p>
+    <label style="font-weight:400"><input type="checkbox" name="allow_pay_at_pickup" ${s.allow_pay_at_pickup ? "checked" : ""}>Allow "Pay at pickup" (only when no deposit is required)</label>
+    <h2 style="margin-top:28px">Shipping</h2>
+    <label style="font-weight:400"><input type="checkbox" name="allow_pickup" ${s.allow_pickup !== false ? "checked" : ""}>Offer local pickup</label>
+    <label style="font-weight:400"><input type="checkbox" name="allow_shipping" ${s.allow_shipping ? "checked" : ""}>Offer shipping</label>
+    <div class="row"><div><label>Shipping price ($)</label><input name="shipping_flat" type="number" step="0.01" min="0" value="${((s.shipping_flat_cents ?? 800) / 100).toFixed(2)}"></div>
+      <div><label>Free shipping on orders over ($, optional)</label><input name="free_over" type="number" step="0.01" min="0" value="${s.free_shipping_over_cents != null ? (s.free_shipping_over_cents / 100).toFixed(2) : ""}"></div></div>
     <h2 style="margin-top:28px">Pickup</h2>
     <label>Pickup location (shown at checkout)</label><input name="pickup_location" value="${esc(s.pickup_location)}" placeholder="e.g. Downtown Austin. Exact address sent after ordering.">
     <label>Order note (shown on product pages & checkout)</label><input name="order_note" value="${esc(s.order_note)}" placeholder="e.g. Please allow up to 2 weeks for shipping.">
@@ -819,6 +993,11 @@ function loadSettings() {
     e.preventDefault();
     const f = Object.fromEntries(new FormData(e.target));
     f.allow_pay_at_pickup = f.allow_pay_at_pickup === "on";
+    f.allow_pickup = f.allow_pickup === "on"; f.allow_shipping = f.allow_shipping === "on";
+    if (!f.allow_pickup && !f.allow_shipping) return toast("Turn on pickup, shipping, or both");
+    f.deposit_percent = Math.max(0, Math.min(100, parseInt(f.deposit_percent) || 0));
+    f.shipping_flat_cents = toCents(f.shipping_flat); delete f.shipping_flat;
+    f.free_shipping_over_cents = f.free_over === "" ? null : toCents(f.free_over); delete f.free_over;
     await saveSettings(f);
   });
 }

@@ -38,15 +38,22 @@ document.getElementById("form").addEventListener("submit", async (e) => {
   err.textContent = ""; out.innerHTML = "";
   const { data: o, error } = await sb.rpc("lookup_order", { p_order_number: parseInt(f.get("n")), p_email: f.get("email") });
   if (error || !o) { err.textContent = "We couldn't find that order. Double-check the number and email."; return; }
-  const idx = STEPS.findIndex(([k]) => k === o.status);
+  const steps = o.fulfillment === "shipping" ? [STEPS[0], STEPS[1], ["shipped", "Shipped", "📦"]] : STEPS;
+  const idx = steps.findIndex(([k]) => k === o.status);
   const steps = o.status === "cancelled" ? `<p class="notice"><b>This order was cancelled.</b> Message me if that's a surprise!</p>`
-    : `<div class="steps">${STEPS.map(([k, l, ic], i) => `<div class="step ${i <= idx ? "done" : ""} ${i === idx ? "current" : ""}"><span>${ic}</span>${l}</div>`).join("")}</div>`;
-  const paid = o.payment_status === "paid" ? "✅ Paid" : o.payment_status === "refunded" ? "Refunded"
-    : o.payment_method === "pickup" ? "You'll pay at pickup" : `⏳ Waiting for your ${o.payment_method === "zelle" ? "Zelle" : "Venmo"} payment`;
+    : `<div class="steps" style="grid-template-columns:repeat(${steps.length},1fr)">${steps.map(([k, l, ic], i) => `<div class="step ${i <= idx ? "done" : ""} ${i === idx ? "current" : ""}"><span>${ic}</span>${l}</div>`).join("")}</div>`;
+  const app = o.payment_method === "zelle" ? "Zelle" : "Venmo";
+  const owed = o.total_cents - (o.amount_paid_cents || 0);
+  const paid = o.payment_status === "paid" ? "✅ Paid in full" : o.payment_status === "refunded" ? "Refunded"
+    : o.payment_status === "deposit_paid" ? `✅ Deposit received · ${money(owed)} left to pay`
+    : o.payment_method === "pickup" ? "You'll pay at pickup"
+    : o.deposit_cents && o.deposit_cents < o.total_cents ? `⏳ Waiting for your ${money(o.deposit_cents)} deposit by ${app} — your order starts once it's received`
+    : `⏳ Waiting for your ${app} payment`;
   out.innerHTML = `<div class="card"><h2>Order #${o.order_number}</h2>${steps}
     <ul>${o.items.map((i) => `<li>${i.quantity} × ${esc(i.name)}</li>`).join("")}</ul>
     <p><b>Total: ${money(o.total_cents)}</b> · ${paid}</p>
-    ${o.status === "ready" ? `<p class="notice"><b>Pickup:</b> ${esc(s.pickup_location)}${s.pickup_instructions ? `<br>${esc(s.pickup_instructions)}` : ""}</p>` : ""}
+    ${o.status === "shipped" && o.tracking_number ? `<p class="notice"><b>Tracking:</b> <a href="https://tools.usps.com/go/TrackConfirmAction?tLabels=${encodeURIComponent(o.tracking_number)}" target="_blank" rel="noopener">${esc(o.tracking_number)}</a></p>` : ""}
+    ${o.status === "ready" && o.fulfillment !== "shipping" ? `<p class="notice"><b>Pickup:</b> ${esc(s.pickup_location)}${s.pickup_instructions ? `<br>${esc(s.pickup_instructions)}` : ""}</p>` : ""}
     <p class="muted">Ordered ${new Date(o.created_at).toLocaleDateString(undefined, { dateStyle: "medium" })}</p></div>`;
 });
 </script>
