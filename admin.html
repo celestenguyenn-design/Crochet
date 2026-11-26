@@ -706,7 +706,8 @@ function loadAppearance() {
     <h2 style="margin-top:28px">Branding</h2>
     <label>Shop name</label><input name="shop_name" value="${esc(s.shop_name)}">
     ${imgField("logo_url", "Logo (optional — replaces the shop name in the header)", s.logo_url)}
-    <p class="muted">Banner, sections, and About text are now in the <b>Homepage</b> tab.</p>
+    ${imgField("banner_image", "Banner picture (your illustrated banner — shows full-width at the top of your home page)", (s.home_sections || []).find((x) => x.type === "image_banner")?.settings?.image || "")}
+    <p class="muted" style="font-size:.9rem">Wide pictures work best (about 4× wider than tall). Other homepage sections and the About text are in the <b>Homepage</b> tab.</p>
     <div class="row"><div><label>Instagram link</label><input name="instagram_url" value="${esc(s.instagram_url)}" placeholder="https://instagram.com/…"></div>
       <div><label>TikTok link</label><input name="tiktok_url" value="${esc(s.tiktok_url)}" placeholder="https://tiktok.com/@…"></div></div>
     <h2 style="margin-top:28px">Visitor stats</h2>
@@ -735,6 +736,17 @@ function loadAppearance() {
     f.corner_radius = parseInt(f.corner_radius);
     f.adsense_client = f.adsense_client.trim();
     if (f.adsense_client && !/^ca-pub-\d+$/.test(f.adsense_client)) return toast("AdSense ID should look like ca-pub-1234567890");
+    // Banner picture lives in the homepage sections: update it, or add it at the top (hiding the text banner)
+    const bannerImg = (f.banner_image || "").trim(); delete f.banner_image;
+    let secs = structuredClone(settings.home_sections?.length ? settings.home_sections : ["hero", "products", "gallery", "shop", "testimonials", "faq"].map(newSection));
+    const ib = secs.find((x) => x.type === "image_banner");
+    if (ib) { ib.settings.image = bannerImg; ib.enabled = !!bannerImg; }
+    else if (bannerImg) {
+      const sec = newSection("image_banner"); sec.settings.image = bannerImg;
+      secs.forEach((x) => { if (x.type === "hero") x.enabled = false; });
+      secs.unshift(sec);
+    }
+    f.home_sections = secs;
     f.goatcounter_code = (f.goatcounter_code || "").trim().toLowerCase().replace(/^https?:\/\//, "").replace(/\.goatcounter\.com.*$/, "");
     if (f.goatcounter_code && !/^[a-z0-9-]+$/.test(f.goatcounter_code)) return toast("GoatCounter code can only have letters, numbers and dashes");
     await saveSettings(f);
