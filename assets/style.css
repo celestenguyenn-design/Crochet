@@ -765,3 +765,29 @@ main.container { padding-top: 44px; padding-bottom: 64px; }
   .banner-btns { flex-wrap: nowrap; gap: 8px; }
   .banner-btns .btn { padding: 10px 14px; font-size: .88rem; white-space: nowrap; }
 }
+
+/* Photo showcase: 3 tilted photo frames of finished work */
+.showcase-title { text-align: center; font-weight: 700; color: var(--text); margin: 0 0 10px; font-size: 1.1rem; }
+.showcase-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; max-width: 760px; margin: 0 auto; padding: 4px 6px; }
+.showcase-row > * { display: block; background: #fff; padding: 6px; border-radius: 18px; box-shadow: 0 6px 16px color-mix(in srgb, var(--primary) 20%, transparent); transition: transform .2s; }
+.showcase-row > *:nth-child(odd) { transform: rotate(-2deg); }
+.showcase-row > *:nth-child(even) { transform: rotate(2deg) translateY(4px); }
+.showcase-row img { width: 100%; aspect-ratio: 3 / 4; object-fit: cover; border-radius: 13px; display: block; }
+@media (min-width: 641px) { .showcase.phones-only { display: none; } #home > .home-section[data-type=showcase]:has(.phones-only) { display: none; } }
+
+/* Phones: everything a little smaller so more fits on the first screen */
+@media (max-width: 640px) {
+  html, body { font-size: 14px; }
+  .announcement { font-size: .72rem; padding: 5px 10px; }
+  .ann-social svg { width: 16px; height: 16px; }
+  .header-inner .logo-img.logo-anim, .header-inner.centered .logo-img.logo-anim { height: 44px; }
+  .logo-text { font-size: 1.05rem; }
+  main.container { padding-top: 16px; }
+  .home-section { margin-bottom: 22px; }
+  main > h2, .section-title { font-size: 1.35rem; margin-bottom: 12px; }
+  .scene b { font-size: .85rem; } .scene span { font-size: .72rem; }
+  .btn { font-size: .85rem; }
+  .showcase-row { gap: 8px; padding: 4px 2px; }
+  .showcase-row > * { padding: 4px; border-radius: 14px; }
+  .showcase-row img { border-radius: 10px; }
+}

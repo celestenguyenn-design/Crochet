@@ -1,7 +1,7 @@
 // Homepage sections: what each section type is, what settings it has, and how it looks.
 // The admin "Homepage" tab builds its editor from SECTION_TYPES, and index.html renders them.
-import { esc, safeUrl, money, isLocked, dropLabel } from "./common.js?v=20261127194630";
-import { marked, DOMPurify } from "./vendor/markdown.js?v=20261127194630";
+import { esc, safeUrl, money, isLocked, dropLabel } from "./common.js?v=20261127200139";
+import { marked, DOMPurify } from "./vendor/markdown.js?v=20261127200139";
 
 export const md = (text) => DOMPurify.sanitize(marked.parse(text || ""));
 export const linkOk = (u) => /^(https?:\/\/|#|[a-z0-9_-]+\.html)/i.test(u || "");
@@ -39,6 +39,19 @@ export const SECTION_TYPES = {
       { key: "cap1", label: "Kitty caption (Crochet)", type: "text", default: "Crochet plushies" },
       { key: "cap2", label: "Flower gift caption (Flowers)", type: "text", default: "Forever flowers" },
       { key: "cap3", label: "Baker caption (Clay)", type: "text", default: "Polymer clay" },
+    ],
+  },
+  showcase: {
+    label: "Photo showcase", icon: "📸", desc: "3 photos of your finished work in little frames (crochet, flowers, clay)",
+    fields: [
+      { key: "title", label: "Title", type: "text", default: "✨ fresh off my hook ✨" },
+      { key: "image1", label: "Photo 1", type: "image", default: "" },
+      { key: "link1", label: "Photo 1 link (optional)", type: "text", default: "category.html?c=crochet" },
+      { key: "image2", label: "Photo 2", type: "image", default: "" },
+      { key: "link2", label: "Photo 2 link (optional)", type: "text", default: "category.html?c=flowers" },
+      { key: "image3", label: "Photo 3", type: "image", default: "" },
+      { key: "link3", label: "Photo 3 link (optional)", type: "text", default: "category.html?c=clay" },
+      { key: "where", label: "Show on", type: "select", options: [["phones", "Phones only"], ["all", "Phones and computers"]], default: "phones" },
     ],
   },
   perks: {
@@ -285,6 +298,15 @@ export const RENDER = {
       ${card("girl-crochet-anim", s.cap1, "category.html?c=crochet", "Shop crochet")}
       ${card("flower-gift", s.cap2, "category.html?c=flowers", "Shop flowers")}
       ${card("clay-baker", s.cap3, "category.html?c=clay", "Shop clay")}</div></section>`;
+  },
+  showcase(s) {
+    const pics = [1, 2, 3].map((i) => [s["image" + i], s["link" + i]]).filter(([u]) => safeUrl(u));
+    if (!pics.length) return "";
+    const ok = (l) => /^(https?:\/\/|[a-z0-9_-]+\.html)/i.test(l || "");
+    return `<section class="showcase ${s.where === "all" ? "" : "phones-only"}">${s.title ? `<p class="showcase-title">${esc(s.title)}</p>` : ""}
+      <div class="showcase-row">${pics.map(([u, l]) => {
+        const img = `<img src="${esc(u)}" alt="" loading="eager">`;
+        return ok(l) ? `<a href="${esc(l)}">${img}</a>` : `<span>${img}</span>`; }).join("")}</div></section>`;
   },
   perks(s) {
     const items = String(s.items || "").split("\n").map((l) => l.trim()).filter(Boolean).slice(0, 6);
