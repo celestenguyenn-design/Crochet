@@ -142,10 +142,10 @@ export function renderChrome(s, active, pages = null) {
   setupStats(s);
 }
 
-// ---------- Animated browser-tab icon (yarn ball + flowers) ----------
-// Firefox animates the SVG by itself; other browsers get a little flip-book of frames.
+// ---------- Animated browser-tab icon (mascot face; the old yarn-ball set is in icon/yarn/) ----------
+// A little flip-book of the mascot's face (computers only; phones always show a still icon).
 function animateTabIcon() {
-  if (window.__iconTimer || matchMedia("(prefers-reduced-motion: reduce)").matches || /Firefox/.test(navigator.userAgent)) return;
+  if (window.__iconTimer || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
   const base = new URL("icon/", import.meta.url).href;
   const frames = [0, 1, 2, 3, 4, 5, 6, 7].map((i) => `${base}f${i}.png`);
   frames.forEach((u) => { const im = new Image(); im.src = u; }); // preload
