@@ -107,7 +107,9 @@ export function renderChrome(s, active, pages = null) {
   const footer = document.getElementById("site-footer");
   const paint = (pg) => {
     const links = [`<a href="order.html">Order status</a>`, `<a href="faq.html">FAQ</a>`, ...(pg || []).map((p) => `<a href="page.html?p=${encodeURIComponent(p.slug)}">${esc(p.title)}</a>`)].join(" · ");
-    footer.innerHTML = `<div class="container footer-inner">
+    footer.innerHTML = `<img class="footer-mascot" src="${new URL("icon/mascot.svg", import.meta.url).href}" alt="" aria-hidden="true">
+      <div class="footer-tag">made with love, one stitch at a time ♡</div>
+      <div class="container footer-inner">
       <div>© ${new Date().getFullYear()} ${esc(s.shop_name)}</div>
       <div class="footer-links">${links}</div>
       <div>${socials}</div></div>`;
@@ -116,14 +118,27 @@ export function renderChrome(s, active, pages = null) {
   if (!pages) sb.from("pages").select("slug,title").eq("published", true).eq("show_in_footer", true).order("sort_order").then(({ data }) => paint(data || []));
   const base = document.documentElement.dataset.baseTitle ??= document.title;
   document.title = base ? `${base} · ${s.shop_name}` : s.shop_name;
-  // Use the logo as the browser-tab icon once one is uploaded
-  if (safeUrl(s.logo_url)) document.querySelectorAll("link[rel=icon], link[rel=apple-touch-icon]").forEach((l) => { l.href = s.logo_url; l.removeAttribute("type"); l.removeAttribute("sizes"); });
+  animateTabIcon();
   paintCategoryMenu(active);
   trackView();
   updateCartCount();
   setupAds(s);
   setupSignupPopup(s);
   setupStats(s);
+}
+
+// ---------- Animated browser-tab icon (yarn ball + flowers) ----------
+// Firefox animates the SVG by itself; other browsers get a little flip-book of frames.
+function animateTabIcon() {
+  if (window.__iconTimer || matchMedia("(prefers-reduced-motion: reduce)").matches || /Firefox/.test(navigator.userAgent)) return;
+  const base = new URL("icon/", import.meta.url).href;
+  const frames = [0, 1, 2, 3, 4, 5, 6, 7].map((i) => `${base}f${i}.png`);
+  frames.forEach((u) => { const im = new Image(); im.src = u; }); // preload
+  document.querySelectorAll("link[rel=icon]").forEach((l) => l.remove());
+  const link = document.createElement("link"); link.rel = "icon"; link.type = "image/png"; document.head.appendChild(link);
+  let i = 0;
+  window.__iconTimer = setInterval(() => { if (!document.hidden) link.href = frames[i = (i + 1) % frames.length]; }, 300);
+  link.href = frames[0];
 }
 
 // ---------- Traffic (private, no cookies, no IP addresses) ----------
@@ -200,7 +215,10 @@ function setupSignupPopup(s) {
   const joined = localStorage.getItem("signup_joined") === "1";
   const tab = document.createElement("button");
   tab.id = "signup-tab"; tab.className = "signup-tab";
-  const paintTab = () => { tab.innerHTML = localStorage.getItem("signup_joined") === "1" ? "🎁 Your code" : `🎁 ${esc(offerShort(s))}`; };
+  const paintTab = () => {
+    const label = localStorage.getItem("signup_joined") === "1" ? "Your code" : offerShort(s);
+    tab.innerHTML = `<span class="tab-gift">🎁</span><span class="tab-label"> ${esc(label)}</span>`; tab.setAttribute("aria-label", label);
+  };
   paintTab();
   tab.onclick = () => openSignupPopup(s, paintTab);
   document.body.appendChild(tab);
