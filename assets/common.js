@@ -110,7 +110,17 @@ export function renderChrome(s, active, pages = null) {
   if (!window.__compactWired) {
     window.__compactWired = true;
     const hdr = document.getElementById("site-header");
-    const onScroll = () => { if (scrollY > 60) hdr.classList.add("compact"); else if (scrollY < 8) hdr.classList.remove("compact"); };
+    // The full-size header's spot is held with padding while the small one floats on top,
+    // so nothing on the page moves (moving it made the header flicker).
+    let full = 0;
+    const onScroll = () => {
+      const on = hdr.classList.contains("compact");
+      if (!on && scrollY > 120) {
+        full = hdr.offsetHeight; document.body.style.paddingTop = full + "px"; hdr.classList.add("compact");
+      } else if (on && scrollY < 40) {
+        hdr.classList.remove("compact"); document.body.style.paddingTop = "";
+      }
+    };
     addEventListener("scroll", onScroll, { passive: true }); onScroll();
   }
   // On phones, tapping "Shop ▾" or "Info ▾" opens its list instead of leaving the page.

@@ -708,9 +708,17 @@ body::after { content: ""; position: fixed; inset: -200px 0 0; z-index: -1; poin
 
 /* Sticky header shrinks once you scroll, so page titles aren't hidden under it */
 #site-header .logo-img.logo-anim { transition: height .2s ease; }
+#site-header.compact { position: fixed; top: 0; left: 0; right: 0; z-index: 50; animation: slidedown .2s ease; }
+@keyframes slidedown { from { transform: translateY(-100%); } }
 #site-header.compact .announcement { display: none; }
 #site-header.compact .header-inner .logo-img.logo-anim { height: 44px; }
 #site-header.compact .header-inner.centered .logo-text { display: none; }
 #site-header.compact .header-inner { padding-top: 4px; padding-bottom: 4px; }
 @media (max-width: 640px) { #site-header.compact .header-inner .logo-img.logo-anim { height: 40px; } #site-header.compact .header-inner.centered .logo-text { display: inline; } }
 main { min-height: calc(100vh - 100px); }
+
+/* Dashboard: "Let them know" row on each order */
+.notify-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 10px 0; padding: 10px 12px; border-radius: 14px; background: var(--soft-pink); }
+.notify-row .tell-box { flex-basis: 100%; }
+.notify-row textarea { width: 100%; }
+body { overflow-anchor: none; }

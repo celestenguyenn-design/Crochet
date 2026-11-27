@@ -251,6 +251,38 @@ async function loadOrders() {
       toast("Copied! They enter their email there to download.");
     });
     card.querySelector("[data-act=copy]")?.addEventListener("click", async () => { await navigator.clipboard.writeText(addrText(o.ship_address)); toast("Address copied — paste it into Pirate Ship"); });
+    // "Let them know" buttons: update the status, then open a ready-to-send email or text.
+    card.querySelectorAll("[data-tell]").forEach((b) => b.onclick = async () => {
+      const kind = b.dataset.tell, first = (o.customer_name || "").split(" ")[0] || "there";
+      const site = (settings.site_url || location.href.replace(/[^/]*$/, "")).replace(/\/?$/, "/");
+      const link = `${site}order.html?n=${o.order_number}`, owed = owedOf(o);
+      const trk = (card.querySelector("[name=tracking]")?.value || o.tracking_number || "").trim();
+      if (kind === "shipped" && !trk && !confirm("No tracking number yet. Send the message without one?")) return;
+      const msg = {
+        in_progress: `Hi ${first}! Just letting you know I've started making your order #${o.order_number} 🧶 I'll message you again when it's ready. You can check on it anytime here: ${link}\n\nThank you so much! 💕\nCeleste, ${settings.shop_name}`,
+        ready: `Hi ${first}! Your order #${o.order_number} is ready for pickup 🎉\n\n${settings.pickup_location || ""}${settings.pickup_instructions ? "\n" + settings.pickup_instructions : ""}${owed > 0 ? `\n\nThe remaining balance is ${money(owed)}.` : ""}\n\nThank you so much! 💕\nCeleste, ${settings.shop_name}`,
+        shipped: `Hi ${first}! Your order #${o.order_number} just shipped 📦${trk ? `\n\nTracking number: ${trk}\nhttps://tools.usps.com/go/TrackConfirmAction?tLabels=${encodeURIComponent(trk)}` : ""}\n\nThank you so much for supporting my small shop! 💕\nCeleste, ${settings.shop_name}`,
+        thanks: `Hi ${first}! Thank you so much for your order #${o.order_number} 💕 I hope you love it! If you have a minute, I'd really appreciate a little review. You can leave one here: ${link}\n\nCeleste, ${settings.shop_name}`,
+      }[kind];
+      const subject = { in_progress: `I started your order #${o.order_number}! 🧶`, ready: `Your order #${o.order_number} is ready! 🎉`, shipped: `Your order #${o.order_number} shipped! 📦`, thanks: `Thank you for your order! 💕` }[kind];
+      const newStatus = { in_progress: "in_progress", ready: "ready", shipped: "shipped" }[kind];
+      if (newStatus) {
+        const patch = { status: newStatus, ...(kind === "shipped" && trk ? { tracking_number: trk } : {}) };
+        const { error } = await sb.from("orders").update(patch).eq("id", o.id);
+        if (error) return toast(error.message);
+        Object.assign(o, patch);
+      }
+      const box = card.querySelector(".tell-box"); box.hidden = false;
+      const phone = (o.phone || "").replace(/[^\d+]/g, "");
+      box.innerHTML = `<p class="muted" style="margin:6px 0">${newStatus ? `Status changed to <b>${STATUS_LABEL[newStatus]}</b>. ` : ""}Now send them this message:</p>
+        <textarea readonly style="min-height:120px">${esc(msg)}</textarea>
+        <div class="inline"><a class="btn small" href="mailto:${encodeURIComponent(o.email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(msg)}">📧 Email it</a>
+        ${phone ? `<a class="btn small secondary" href="sms:${phone}?&body=${encodeURIComponent(msg)}">💬 Text it</a>` : ""}
+        <button class="btn small secondary" data-copy-msg>📋 Copy</button>
+        ${newStatus ? `<button class="btn small secondary" data-done-tell>Done</button>` : ""}</div>`;
+      box.querySelector("[data-copy-msg]").onclick = async () => { await navigator.clipboard.writeText(msg); toast("Copied!"); };
+      box.querySelector("[data-done-tell]")?.addEventListener("click", () => loadOrders());
+    });
     card.querySelector("[data-act=save]").addEventListener("click", () => {
       const v = (n) => card.querySelector(`[name=${n}]`)?.value;
       save(o.id, { status: v("status"), payment_status: v("payment_status"), amount_paid_cents: toCents(v("amount_paid")),
@@ -303,6 +335,12 @@ function orderCard(o) {
     ${o.payment_status !== "paid" && o.status !== "cancelled" ? `<div class="inline quick">
       ${o.payment_status === "unpaid" && o.deposit_cents && o.deposit_cents < o.total_cents ? `<button class="btn small" data-act="deposit">✓ Deposit received (${money(o.deposit_cents)})</button>` : ""}
       <button class="btn small" data-act="full">✓ Paid in full (${money(o.total_cents)})</button></div>` : ""}
+    ${o.status !== "cancelled" ? `<div class="notify-row"><b>Let them know:</b>
+      ${o.status === "new" ? `<button class="btn small secondary" data-tell="in_progress">🧶 I started it</button>` : ""}
+      ${["new", "in_progress"].includes(o.status) && !ship && o.fulfillment !== "digital" ? `<button class="btn small secondary" data-tell="ready">✅ It's ready for pickup</button>` : ""}
+      ${["new", "in_progress", "ready"].includes(o.status) && ship ? `<button class="btn small secondary" data-tell="shipped">📦 It shipped</button>` : ""}
+      ${["shipped", "picked_up", "ready"].includes(o.status) ? `<button class="btn small secondary" data-tell="thanks">💕 Thank you + review</button>` : ""}
+      <div class="tell-box" hidden></div></div>` : ""}
     <details class="order-edit"><summary>Update status, payment & notes</summary>
       <div class="inline">
         <div><label>Order status</label><select name="status">${ORDER_STATUSES.map((s) => `<option value="${s}" ${s === o.status ? "selected" : ""}>${STATUS_LABEL[s]}</option>`).join("")}</select></div>
