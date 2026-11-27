@@ -104,7 +104,6 @@
   <div id="app" style="display:none">
     <div class="tabs" id="tabs">
       <button data-tab="orders" class="active">Orders</button>
-      <button data-tab="preorders">Pre-orders</button>
       <button data-tab="requests">Custom Requests</button>
       <button data-tab="messages">Messages</button>
       <button data-tab="products">Products</button>
@@ -120,7 +119,6 @@
       <button data-tab="settings">Payment &amp; Pickup</button>
     </div>
     <section id="tab-orders"></section>
-    <section id="tab-preorders" hidden></section>
     <section id="tab-requests" hidden></section>
     <section id="tab-messages" hidden></section>
     <section id="tab-products" hidden></section>
@@ -169,7 +167,7 @@ $("login").addEventListener("submit", async (e) => {
 $("logout").addEventListener("click", async (e) => { e.preventDefault(); await sb.auth.signOut(); boot(); });
 
 // ---------- Tabs ----------
-const loaders = { orders: loadOrders, requests: loadRequests, preorders: loadPreorders, messages: loadMessages, products: loadProducts, homepage: loadHomepage, gallery: loadGallery, reviews: loadReviews, pages: loadPages, marketing: loadMarketing, markets: loadMarkets, traffic: loadTraffic, patterns: loadPatterns, appearance: loadAppearance, settings: loadSettings };
+const loaders = { orders: loadOrders, requests: loadRequests, messages: loadMessages, products: loadProducts, homepage: loadHomepage, gallery: loadGallery, reviews: loadReviews, pages: loadPages, marketing: loadMarketing, markets: loadMarkets, traffic: loadTraffic, patterns: loadPatterns, appearance: loadAppearance, settings: loadSettings };
 function showTab(name) {
   document.querySelectorAll("#tabs button").forEach((b) => b.classList.toggle("active", b.dataset.tab === name));
   document.querySelectorAll("#app > section").forEach((s) => (s.hidden = s.id !== "tab-" + name));
@@ -276,7 +274,7 @@ async function loadOrders() {
       const phone = (o.phone || "").replace(/[^\d+]/g, "");
       box.innerHTML = `<p class="muted" style="margin:6px 0">${newStatus ? `Status changed to <b>${STATUS_LABEL[newStatus]}</b>. ` : ""}Now send them this message:</p>
         <textarea readonly style="min-height:120px">${esc(msg)}</textarea>
-        <div class="inline"><a class="btn small" href="mailto:${encodeURIComponent(o.email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(msg)}">📧 Email it</a>
+        <div class="inline">${o.email ? `<a class="btn small" href="mailto:${encodeURIComponent(o.email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(msg)}">📧 Email it</a>` : ""}
         ${phone ? `<a class="btn small secondary" href="sms:${phone}?&body=${encodeURIComponent(msg)}">💬 Text it</a>` : ""}
         <button class="btn small secondary" data-copy-msg>📋 Copy</button>
         ${newStatus ? `<button class="btn small secondary" data-done-tell>Done</button>` : ""}</div>`;

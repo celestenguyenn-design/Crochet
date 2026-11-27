@@ -39,7 +39,7 @@ renderChrome(s, "shop");
 const q = (t, sel = "*") => sb.from(t).select(sel);
 const today = new Date().toISOString().slice(0, 10);
 const [products, categories, gallery, reviews, faqs, patterns, events] = await Promise.all([
-  q("products").order("sort_order").order("created_at", { ascending: false }),
+  q("products").eq("active", true).order("sort_order").order("created_at", { ascending: false }),
   q("categories").order("sort_order").order("name"),
   q("gallery").order("sort_order").order("created_at", { ascending: false }),
   q("reviews").eq("visible", true).order("sort_order").order("created_at", { ascending: false }),

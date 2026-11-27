@@ -106,23 +106,6 @@ export function renderChrome(s, active, pages = null) {
       </nav>
     </div>`;
   const btn = document.getElementById("menu-btn"), nav = document.getElementById("main-nav");
-  // When you scroll down, the sticky header shrinks so it doesn't cover the page.
-  if (!window.__compactWired) {
-    window.__compactWired = true;
-    const hdr = document.getElementById("site-header");
-    // The full-size header's spot is held with padding while the small one floats on top,
-    // so nothing on the page moves (moving it made the header flicker).
-    let full = 0;
-    const onScroll = () => {
-      const on = hdr.classList.contains("compact");
-      if (!on && scrollY > 120) {
-        full = hdr.offsetHeight; document.body.style.paddingTop = full + "px"; hdr.classList.add("compact");
-      } else if (on && scrollY < 40) {
-        hdr.classList.remove("compact"); document.body.style.paddingTop = "";
-      }
-    };
-    addEventListener("scroll", onScroll, { passive: true }); onScroll();
-  }
   // On phones, tapping "Shop ▾" or "Info ▾" opens its list instead of leaving the page.
   nav.querySelectorAll(".nav-drop > a").forEach((a) => a.addEventListener("click", (e) => {
     if (!matchMedia("(max-width: 640px)").matches) return;

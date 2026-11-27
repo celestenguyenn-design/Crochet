@@ -22,7 +22,7 @@ const el = document.getElementById("cat-page");
 if (!c) { el.innerHTML = `<h1>Not found</h1><p><a href="index.html">← Back to the shop</a></p>`; renderChrome(s, "shop"); }
 else {
   document.title = c.name; renderChrome(s, "cat-" + c.slug);
-  const { data: products } = await sb.from("products").select("*").eq("category_id", c.id).order("sort_order").order("created_at", { ascending: false });
+  const { data: products } = await sb.from("products").select("*").eq("category_id", c.id).eq("active", true).order("sort_order").order("created_at", { ascending: false });
   const isFlowers = /flower|bouquet/i.test(c.name);
   el.innerHTML = `<section class="cat-hero ${safeUrl(c.image_url) ? "has-img" : ""}">
       ${safeUrl(c.image_url) ? `<img src="${esc(c.image_url)}" alt="">` : ""}
