@@ -676,10 +676,10 @@ body::after { content: ""; position: fixed; inset: -200px 0 0; z-index: -1; poin
 .reveal { opacity: 0; transform: translateY(26px); transition: opacity .7s ease, transform .7s cubic-bezier(.2,.8,.3,1); }
 .reveal.in { opacity: 1; transform: none; }
 
-/* Mascot gently bobs (until her real animation is made) */
-.banner-mascot, .footer-mascot { animation: mbob 2.8s ease-in-out infinite; transform-origin: 50% 100%; }
-@keyframes mbob { 50% { transform: translateY(-6px) rotate(-2deg); } }
-@media (prefers-reduced-motion: reduce) { .banner-mascot, .footer-mascot { animation: none; } }
+/* Mascot poses on the thank-you and "closed" screens */
+.thanks-mascot, .sleepy-mascot { display: block; margin: 0 auto 4px; width: 180px; height: auto; }
+.banner-mascot { width: 120px; bottom: -30px; }
+@media (max-width: 640px) { .banner-mascot { width: 70px; bottom: -20px; } }
 
 /* Buttons get a little bounce */
 .btn { transition: transform .15s ease, box-shadow .2s ease; }

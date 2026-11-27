@@ -107,7 +107,7 @@ export function renderChrome(s, active, pages = null) {
   const footer = document.getElementById("site-footer");
   const paint = (pg) => {
     const links = [`<a href="order.html">Order status</a>`, `<a href="faq.html">FAQ</a>`, ...(pg || []).map((p) => `<a href="page.html?p=${encodeURIComponent(p.slug)}">${esc(p.title)}</a>`)].join(" · ");
-    footer.innerHTML = `<img class="footer-mascot" src="${new URL("art/mascot.webp", import.meta.url).href}" alt="" aria-hidden="true">
+    footer.innerHTML = `<img class="footer-mascot" src="${new URL("art/mascot-anim.webp", import.meta.url).href}" alt="" aria-hidden="true">
       <div class="footer-tag">made with love, one stitch at a time ♡</div>
       <div class="container footer-inner">
       <div>© ${new Date().getFullYear()} ${esc(s.shop_name)}</div>

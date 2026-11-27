@@ -120,7 +120,7 @@ const line = (l, v, cls = "") => `<div class="sum-line ${cls}"><span>${l}</span>
 function render() {
   const items = cart.get();
   if (!items.length) {
-    $("items").innerHTML = `<div class="card center empty-cart"><img src="assets/art/mascot.webp" alt="" width="150" height="152"><p>Your cart is empty!</p><a class="btn" href="index.html#shop">Go shopping</a></div>`;
+    $("items").innerHTML = `<div class="card center empty-cart"><img src="assets/art/mascot-anim.webp" alt="" width="150" height="212"><p>Your cart is empty!</p><a class="btn" href="index.html#shop">Go shopping</a></div>`;
     $("summary").style.display = "none"; $("submit").disabled = true; return;
   }
   $("items").innerHTML = items.map((i, idx) => `<div class="cart-item">
@@ -190,7 +190,7 @@ $("form").addEventListener("submit", async (e) => {
   $("checkout-view").style.display = "none";
   const done = $("done-view");
   done.style.display = "";
-  done.innerHTML = `<h1>Thank you! 🧶</h1><div class="notice"><h2>Order #${n} is reserved</h2>
+  done.innerHTML = `<img class="thanks-mascot" src="assets/art/girl-thanks-anim.webp" alt="" width="180" height="230"><h1>Thank you! 🧶</h1><div class="notice"><h2>Order #${n} is reserved</h2>
     ${data.deposit_cents ? `<p class="deposit-alert">⚠️ ${data.fulfillment === "digital" ? "Your download unlocks once your payment is received." : `Your order isn't confirmed until your ${what} is received.`} Please send it within <b>48 hours</b>.</p>` : ""}
     ${payMsg}
     ${rest > 0 && data.deposit_cents ? `<p>The remaining <b>${money(rest)}</b> is due ${data.fulfillment === "shipping" ? "before your order ships" : "at pickup"}.</p>` : ""}

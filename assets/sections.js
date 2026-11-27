@@ -228,7 +228,7 @@ export const RENDER = {
     if (!img) return d.preview ? `<section class="banner-img ph" style="aspect-ratio:4/1; display:grid; place-items:center"><p class="muted">(Upload your banner picture)</p></section>` : "";
     const btn = (l, h, cls) => (l && linkOk(h) ? `<a class="btn ${cls}" href="${esc(h)}">${esc(l)}</a>` : "");
     const btns = btn(s.button1_label, s.button1_link, "") + " " + btn(s.button2_label, s.button2_link, "secondary");
-    return `<section><div class="banner-wrap"><img class="banner-img" src="${esc(img)}" alt="${esc(s.alt)}"><img class="banner-mascot" src="${new URL("art/mascot.webp", import.meta.url).href}" alt="" aria-hidden="true"></div>${btns.trim() ? `<div class="hero-btns banner-btns">${btns}</div>` : ""}</section>`;
+    return `<section><div class="banner-wrap"><img class="banner-img" src="${esc(img)}" alt="${esc(s.alt)}"><img class="banner-mascot" src="${new URL("art/mascot-anim.webp", import.meta.url).href}" alt="" aria-hidden="true"></div>${btns.trim() ? `<div class="hero-btns banner-btns">${btns}</div>` : ""}</section>`;
   },
   products(s, d) {
     let list = d.products;
@@ -279,7 +279,7 @@ export const RENDER = {
     const art = (f) => new URL(`art/${f}.webp`, import.meta.url).href;
     const card = (f, cap, href, sub) => `<a class="scene" href="${href}"><img src="${art(f)}" alt="" loading="lazy"><b>${esc(cap)}</b><span>${sub} →</span></a>`;
     return `<section class="scenes-section">${head(s.title)}<div class="scenes">
-      ${card("cat-crochet", s.cap1, "category.html?c=crochet", "Shop crochet")}
+      ${card("girl-crochet-anim", s.cap1, "category.html?c=crochet", "Shop crochet")}
       ${card("flower-gift", s.cap2, "category.html?c=flowers", "Shop flowers")}
       ${card("clay-baker", s.cap3, "category.html?c=clay", "Shop clay")}</div></section>`;
   },

@@ -28,6 +28,31 @@
   },
   "mascot-girl-v2": {
     "still": "ca61b682-50e7-4875-ac30-98033af6bf8e",
-    "sha12": "f2500057d5fc"
-  }
+    "sha12": "f2500057d5fc",
+    "animation": "7ac2ce00-1130-49c3-b4f5-d43e45feab32",
+    "anim_file": "mascot-anim.webp",
+    "anim_sha12": "8b6bacac05e3"
+  },
+  "girl-crochet": {
+    "still": "dba5b2d0-8974-4182-828e-61b8483c9830",
+    "sha12": "e25c7564445d",
+    "animation": "8900e6a7-46af-47cb-8c03-d422cc878357",
+    "anim_file": "girl-crochet-anim.webp",
+    "anim_sha12": "6cd84530cb2b"
+  },
+  "girl-thanks": {
+    "still": "b7c0dec7-cdd2-4ed9-b099-d0efc968653f",
+    "sha12": "db4f7dcf703e",
+    "animation": "0d9c613d-4b4b-48c4-a3bd-44d8f56f57fd",
+    "anim_file": "girl-thanks-anim.webp",
+    "anim_sha12": "9579530743c7"
+  },
+  "girl-sleepy": {
+    "still": "739089d4-4a70-4443-b280-7761ffd5ccac",
+    "sha12": "6e9c85da8065",
+    "animation": "e9322bbb-5c84-4b59-b3a8-b1545164188a",
+    "anim_file": "girl-sleepy-anim.webp",
+    "anim_sha12": "f7f8e5eb4679"
+  },
+  "_note": "Full-size originals of every animation are in originals/. Reuse these asset IDs for new poses/animations instead of regenerating."
 }

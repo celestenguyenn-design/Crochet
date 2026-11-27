@@ -66,7 +66,7 @@ const settings = await getSettings();
 renderChrome(settings, "custom");
 if (settings.custom_open === false) {
   const ig = settings.instagram_url;
-  document.getElementById("form").outerHTML = `<div class="card closed-box"><div class="big-emoji">💤</div>
+  document.getElementById("form").outerHTML = `<div class="card closed-box"><img class="sleepy-mascot" src="assets/art/girl-sleepy-anim.webp" alt="" width="180" height="225">
     <h2>Custom orders are closed${settings.custom_reopen_text ? ` until ${esc(settings.custom_reopen_text)}` : ""}</h2>
     <p style="white-space:pre-wrap">${esc(settings.custom_closed_message || "")}</p>
     <p><a class="btn" href="index.html#shop">Shop ready-made pieces</a> ${ig ? `<a class="btn secondary" href="${esc(ig)}" target="_blank" rel="noopener">Follow on Instagram</a>` : ""}</p></div>`;
