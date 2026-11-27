@@ -1,7 +1,7 @@
 // Homepage sections: what each section type is, what settings it has, and how it looks.
 // The admin "Homepage" tab builds its editor from SECTION_TYPES, and index.html renders them.
-import { esc, safeUrl, money, isLocked, dropLabel } from "./common.js?v=20261127081039";
-import { marked, DOMPurify } from "./vendor/markdown.js?v=20261127081039";
+import { esc, safeUrl, money, isLocked, dropLabel } from "./common.js?v=20261127082558";
+import { marked, DOMPurify } from "./vendor/markdown.js?v=20261127082558";
 
 export const md = (text) => DOMPurify.sanitize(marked.parse(text || ""));
 export const linkOk = (u) => /^(https?:\/\/|#|[a-z0-9_-]+\.html)/i.test(u || "");
@@ -103,7 +103,9 @@ export const SECTION_TYPES = {
       { key: "title", label: "Title", type: "text", default: "How I make them" },
       { key: "body", label: "Text (optional)", type: "textarea", default: "" },
       { key: "video1", label: "Video 1 (Instagram reel / TikTok link, or upload)", type: "video", default: "" },
+      { key: "poster1", label: "Video 1 cover photo (optional, for uploaded videos)", type: "image", default: "" },
       { key: "video2", label: "Video 2 (optional)", type: "video", default: "" },
+      { key: "poster2", label: "Video 2 cover photo (optional)", type: "image", default: "" },
     ],
   },
   drop: {
@@ -177,7 +179,7 @@ export function newSection(type) {
 }
 
 // ---------- Videos: Instagram reels, TikToks, YouTube Shorts, or uploaded files ----------
-export function videoEmbed(url) {
+export function videoEmbed(url, poster) {
   const u = String(url || "").trim();
   let m;
   if ((m = u.match(/instagram\.com\/(?:[\w.]+\/)?(reel|reels|p|tv)\/([\w-]+)/i)))
@@ -187,7 +189,7 @@ export function videoEmbed(url) {
   if ((m = u.match(/(?:youtube\.com\/(?:shorts\/|watch\?v=)|youtu\.be\/)([\w-]{6,})/i)))
     return `<div class="vid vid-yt"><iframe src="https://www.youtube-nocookie.com/embed/${m[1]}" loading="lazy" allowfullscreen title="YouTube video"></iframe></div>`;
   // Uploaded videos play by themselves (muted, looping) when scrolled into view. Tap to hear sound.
-  if (safeUrl(u)) return `<div class="vid vid-file"><video src="${esc(u)}" muted loop playsinline preload="metadata" data-autoplay controls></video></div>`;
+  if (safeUrl(u)) return `<div class="vid vid-file"><video src="${esc(u)}"${safeUrl(poster) ? ` poster="${esc(poster)}"` : ""} muted loop playsinline preload="metadata" data-autoplay controls></video></div>`;
   return "";
 }
 
@@ -271,7 +273,7 @@ export const RENDER = {
     return `<section class="card text-block" style="text-align:${s.align === "center" ? "center" : "left"}">${s.title ? `<h2>${esc(s.title)}</h2>` : ""}<div>${md(s.body)}</div></section>`;
   },
   videos(s, d) {
-    const vids = [s.video1, s.video2].map(videoEmbed).filter(Boolean);
+    const vids = [[s.video1, s.poster1], [s.video2, s.poster2]].map(([v, p]) => videoEmbed(v, p)).filter(Boolean);
     if (!vids.length) return d.preview ? `<section>${head(s.title)}<p class="muted">(Paste an Instagram reel link or upload a video.)</p></section>` : "";
     return `<section>${head(s.title)}${s.body ? `<p class="center" style="max-width:640px;margin:0 auto 18px">${esc(s.body)}</p>` : ""}
       <div class="vids vids-${vids.length}">${vids.join("")}</div></section>`;

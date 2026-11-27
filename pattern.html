@@ -6,15 +6,15 @@
 <title>Pattern</title>
 <link rel="icon" href="assets/icon/favicon-32.png" sizes="32x32">
 <link rel="apple-touch-icon" href="assets/icon/apple-touch.png">
-<link rel="stylesheet" href="assets/style.css?v=20261127081039">
+<link rel="stylesheet" href="assets/style.css?v=20261127082558">
 </head>
 <body>
 <header id="site-header"></header>
 <main class="container"><article id="article" class="article" data-site=""><p class="muted">Loading…</p></article></main>
 <script type="module">
-import { sb, getSettings, renderChrome, esc, safeUrl, wireSignup } from "./assets/common.js?v=20261127081039";
-import { signupForm } from "./assets/sections.js?v=20261127081039";
-import { marked, DOMPurify } from "./assets/vendor/markdown.js?v=20261127081039";
+import { sb, getSettings, renderChrome, esc, safeUrl, wireSignup } from "./assets/common.js?v=20261127082558";
+import { signupForm } from "./assets/sections.js?v=20261127082558";
+import { marked, DOMPurify } from "./assets/vendor/markdown.js?v=20261127082558";
 // "Supplies I use": each line is "Label | link" (your AliExpress / Temu / Amazon affiliate link)
 // or "Label | search words" (opens an AliExpress search). Amazon links also get your Associates ID.
 function supplyBox(text, tag) {
@@ -84,7 +84,7 @@ else {
   document.getElementById("print-btn").onclick = () => window.print();
   document.getElementById("share-btn").onclick = async () => {
     if (navigator.share) { try { await navigator.share({ title: p.title, url: location.href }); } catch {} }
-    else { await navigator.clipboard.writeText(location.href); const { toast } = await import("./assets/common.js?v=20261127081039"); toast("Link copied!"); }
+    else { await navigator.clipboard.writeText(location.href); const { toast } = await import("./assets/common.js?v=20261127082558"); toast("Link copied!"); }
   };
 }
 </script>
