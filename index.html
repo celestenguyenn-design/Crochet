@@ -56,9 +56,15 @@ const fallback = () => ["hero", "products", "gallery", "shop", "testimonials", "
 const home = document.getElementById("home");
 function render(sections) {
   home.innerHTML = renderSections(sections?.length ? sections : fallback(), data) || `<p class="muted center">Nothing here yet.</p>`;
-  wireCarousels(home); startCountdowns(home); loadInstagram(home);
+  wireCarousels(home); startCountdowns(home); loadInstagram(home); reveal();
   const cat = new URLSearchParams(location.search).get("cat");
   if (cat) filterCat(cat);
+}
+// Sections gently float up into view as you scroll.
+function reveal() {
+  if (!("IntersectionObserver" in window) || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const io = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); } }), { rootMargin: "0px 0px -8% 0px" });
+  home.querySelectorAll(".home-section").forEach((el, i) => { if (i > 1) { el.classList.add("reveal"); io.observe(el); } });
 }
 function filterCat(id) {
   home.querySelectorAll(".chip").forEach((c) => c.classList.toggle("active", c.dataset.cat === id));

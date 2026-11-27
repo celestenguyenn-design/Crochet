@@ -228,7 +228,7 @@ export const RENDER = {
     if (!img) return d.preview ? `<section class="banner-img ph" style="aspect-ratio:4/1; display:grid; place-items:center"><p class="muted">(Upload your banner picture)</p></section>` : "";
     const btn = (l, h, cls) => (l && linkOk(h) ? `<a class="btn ${cls}" href="${esc(h)}">${esc(l)}</a>` : "");
     const btns = btn(s.button1_label, s.button1_link, "") + " " + btn(s.button2_label, s.button2_link, "secondary");
-    return `<section><div class="banner-wrap"><img class="banner-img" src="${esc(img)}" alt="${esc(s.alt)}"></div>${btns.trim() ? `<div class="hero-btns banner-btns">${btns}</div>` : ""}</section>`;
+    return `<section><div class="banner-wrap"><img class="banner-img" src="${esc(img)}" alt="${esc(s.alt)}"><img class="banner-mascot" src="${new URL("art/mascot.webp", import.meta.url).href}" alt="" aria-hidden="true"></div>${btns.trim() ? `<div class="hero-btns banner-btns">${btns}</div>` : ""}</section>`;
   },
   products(s, d) {
     let list = d.products;
@@ -253,8 +253,10 @@ export const RENDER = {
   gallery(s, d) {
     const photos = d.gallery.filter((g) => safeUrl(g.image_url)).slice(0, Number(s.limit) || 12);
     if (!photos.length) return d.preview ? `<section>${head(s.title)}<p class="muted">(Upload photos in the Gallery tab.)</p></section>` : "";
-    return `<section>${head(s.title)}<div class="gallery">${photos.map((g) => `<figure data-full="${esc(g.image_url)}" data-caption="${esc(g.caption)}">
-      <img src="${esc(g.image_url)}" alt="${esc(g.caption || "Crochet photo")}" loading="lazy">${g.caption ? `<figcaption>${esc(g.caption)}</figcaption>` : ""}</figure>`).join("")}</div></section>`;
+    // One tidy row of polaroids that slowly slides sideways (pauses on hover, swipeable on phones).
+    const fig = (g, dup) => `<figure data-full="${esc(g.image_url)}" data-caption="${esc(g.caption)}"${dup ? ' aria-hidden="true"' : ""}>
+      <img src="${esc(g.image_url)}" alt="${dup ? "" : esc(g.caption || "Crochet photo")}" loading="lazy">${g.caption ? `<figcaption>${esc(g.caption)}</figcaption>` : ""}</figure>`;
+    return `<section>${head(s.title)}<div class="gallery-strip"><div class="gallery-track" style="--n:${photos.length}">${photos.map((g) => fig(g)).join("")}${photos.map((g) => fig(g, true)).join("")}</div></div></section>`;
   },
   image_text(s) {
     const img = safeUrl(s.image);
