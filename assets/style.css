@@ -742,3 +742,4 @@ body::after { content: ""; position: fixed; inset: -200px 0 0; z-index: -1; poin
 /* "Supplies I use" affiliate links on pattern pages */
 .supplies { background: var(--soft-pink); border-radius: 18px; padding: 14px 16px; margin: 16px 0; }
 .supply-links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.tip-jar { margin: 22px 0; background: linear-gradient(135deg, var(--soft-lav), var(--soft-pink)); }

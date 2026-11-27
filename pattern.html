@@ -6,31 +6,44 @@
 <title>Pattern</title>
 <link rel="icon" href="assets/icon/favicon-32.png" sizes="32x32">
 <link rel="apple-touch-icon" href="assets/icon/apple-touch.png">
-<link rel="stylesheet" href="assets/style.css?v=20261127070313">
+<link rel="stylesheet" href="assets/style.css?v=20261127071247">
 </head>
 <body>
 <header id="site-header"></header>
 <main class="container"><article id="article" class="article" data-site=""><p class="muted">Loading…</p></article></main>
 <script type="module">
-import { sb, getSettings, renderChrome, esc, safeUrl, wireSignup } from "./assets/common.js?v=20261127070313";
-import { signupForm } from "./assets/sections.js?v=20261127070313";
-import { marked, DOMPurify } from "./assets/vendor/markdown.js?v=20261127070313";
-// "Supplies I use": each line is "Label | search words" or "Label | https://amazon link".
-// Your Amazon Associates ID (Settings) is added so you earn from purchases.
+import { sb, getSettings, renderChrome, esc, safeUrl, wireSignup } from "./assets/common.js?v=20261127071247";
+import { signupForm } from "./assets/sections.js?v=20261127071247";
+import { marked, DOMPurify } from "./assets/vendor/markdown.js?v=20261127071247";
+// "Supplies I use": each line is "Label | link" (your AliExpress / Temu / Amazon affiliate link)
+// or "Label | search words" (opens an AliExpress search). Amazon links also get your Associates ID.
 function supplyBox(text, tag) {
   const lines = String(text || "").split("\n").map((l) => l.split("|").map((x) => x.trim())).filter(([l]) => l);
   if (!lines.length) return "";
   const t = /^[A-Za-z0-9_-]{1,40}$/.test(tag || "") ? tag : "";
+  let affiliate = false;
   const link = (l, q) => {
-    let u;
-    if (/^https:\/\/(www\.)?(amazon\.com|amzn\.to)\//.test(q || "")) u = new URL(q);
-    else { u = new URL("https://www.amazon.com/s"); u.searchParams.set("k", q || l); }
-    if (t && u.hostname.endsWith("amazon.com")) u.searchParams.set("tag", t);
-    return u.href;
+    if (/^https:\/\/[^\s"'<>]+$/.test(q || "")) {
+      const u = new URL(q); affiliate = true;
+      if (t && /(^|\.)amazon\.com$/.test(u.hostname)) u.searchParams.set("tag", t);
+      return u.href;
+    }
+    return `https://www.aliexpress.com/w/wholesale-${encodeURIComponent((q || l).trim().replace(/\s+/g, "-"))}.html`;
   };
+  const buttons = lines.map(([l, q]) => `<a class="btn small secondary" href="${esc(link(l, q))}" target="_blank" rel="noopener sponsored">${esc(l)}</a>`).join("");
   return `<div class="supplies no-print"><b>🛒 Supplies I use</b>
-    <div class="supply-links">${lines.map(([l, q]) => `<a class="btn small secondary" href="${esc(link(l, q))}" target="_blank" rel="noopener sponsored">${esc(l)}</a>`).join("")}</div>
-    ${t ? `<p class="muted" style="font-size:.8rem;margin:6px 0 0">As an Amazon Associate I earn from qualifying purchases. It doesn't cost you anything extra and helps keep my patterns free 💕</p>` : ""}</div>`;
+    <div class="supply-links">${buttons}</div>
+    ${affiliate ? `<p class="muted" style="font-size:.8rem;margin:6px 0 0">Some of these are affiliate links, so I may earn a small commission if you buy. It doesn't cost you anything extra and helps keep my patterns free 💕</p>` : ""}</div>`;
+}
+// Tip jar under free patterns: your Ko-fi (or any tip link) from Settings, or your Venmo.
+function tipJar(s) {
+  const venmo = String(s.venmo_handle || "").replace(/^@/, "");
+  const url = /^https:\/\/[^\s"'<>]+$/.test(s.tip_url || "") ? s.tip_url
+    : venmo ? `https://venmo.com/${encodeURIComponent(venmo)}?txn=pay&note=${encodeURIComponent("Tip for a free pattern 💕")}` : "";
+  if (!url) return "";
+  return `<div class="tip-jar card center no-print"><p style="font-size:1.6rem;margin:0">☕</p><h3 style="margin:4px 0">Enjoyed this free pattern?</h3>
+    <p class="muted" style="margin:0 0 10px">If it helped you, a little tip means so much and helps me keep making free patterns!</p>
+    <a class="btn" href="${esc(url)}" target="_blank" rel="noopener">💕 Leave a tip</a></div>`;
 }
 const s = await getSettings();
 const slug = new URLSearchParams(location.search).get("p");
@@ -62,6 +75,7 @@ else {
     ${supplyBox(p.supplies, s.amazon_tag)}
     <div class="content">${body}</div>
     <div class="ad-slot"></div>
+    ${tipJar(s)}
     <div class="card signup center no-print"><h2>Want more free patterns?</h2><p>Get an email when I post a new one.</p>${signupForm("Sign me up", "pattern")}</div>
     <div class="notice center no-print" style="margin-top:20px"><p>Don't want to make it yourself?</p><a class="btn" href="custom.html">Request a custom piece</a> <a class="btn secondary" href="index.html">Visit the shop</a></div>`;
   el.dataset.site = `${s.shop_name} · ${location.href}`;
@@ -70,7 +84,7 @@ else {
   document.getElementById("print-btn").onclick = () => window.print();
   document.getElementById("share-btn").onclick = async () => {
     if (navigator.share) { try { await navigator.share({ title: p.title, url: location.href }); } catch {} }
-    else { await navigator.clipboard.writeText(location.href); const { toast } = await import("./assets/common.js?v=20261127070313"); toast("Link copied!"); }
+    else { await navigator.clipboard.writeText(location.href); const { toast } = await import("./assets/common.js?v=20261127071247"); toast("Link copied!"); }
   };
 }
 </script>
