@@ -4,6 +4,7 @@ import { SUPABASE_URL, SUPABASE_KEY } from "./config.js";
 export const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 export const FONTS = {
+  "Maven Pro": "sans-serif",
   "Fredoka": "sans-serif", "Comfortaa": "sans-serif", "Sniglet": "sans-serif", "Chewy": "cursive", "Grandstander": "sans-serif",
   "Fraunces": "serif", "Playfair Display": "serif", "Lora": "serif", "DM Serif Display": "serif",
   "Pacifico": "cursive", "Caveat": "cursive", "Amatic SC": "cursive", "Baloo 2": "sans-serif",
@@ -68,22 +69,37 @@ export function renderChrome(s, active, pages = null) {
     safeUrl(s.tiktok_url) && `<a href="${esc(s.tiktok_url)}" target="_blank" rel="noopener" aria-label="TikTok" title="TikTok">${ICONS.tiktok}</a>`,
   ].filter(Boolean).join("");
   const ann = annText || icons ? `<div class="announcement"><div class="ann-text">${annText}</div>${icons ? `<div class="ann-social">${icons}</div>` : ""}</div>` : "";
+  const infoActive = ["about", "contact", "markets", "faq", "order"].includes(active) ? "active" : "";
+  const centered = (s.header_style || "centered") === "centered";
   document.getElementById("site-header").innerHTML = `${ann}
-    <div class="container header-inner">
+    <div class="container header-inner ${centered ? "centered" : ""}">
+      <button class="menu-btn" id="menu-btn" aria-label="Menu" aria-expanded="false">☰</button>
       <a href="index.html" class="logo">${logo}</a>
-      <nav>
+      <a href="cart.html" class="cart-link cart-top ${active === "cart" ? "active" : ""}" aria-label="Cart">🛍️ <span class="cart-word">Cart</span> <span id="cart-count" class="badge">0</span></a>
+      <nav id="main-nav">
+        ${link("index.html", "Home", "shop")}
         <div class="nav-drop">
-          <a href="index.html#shop" class="${active === "shop" || String(active).startsWith("cat-") ? "active" : ""}">Shop <span class="caret">▾</span></a>
+          <a href="index.html#shop" class="${String(active).startsWith("cat-") ? "active" : ""}">Shop <span class="caret">▾</span></a>
           <div class="drop" id="shop-menu"><a href="index.html#shop">🛍️ Shop all</a></div>
         </div>
         <span id="nav-cats" class="nav-cats"></span>
         ${link("custom.html", "Custom Orders", "custom")}
         ${link("patterns.html", "Free Patterns", "patterns")}
-        ${link("page.html?p=about", "About", "about")}
-        ${link("contact.html", "Contact", "contact")}
-        <a href="cart.html" class="cart-link ${active === "cart" ? "active" : ""}">Cart <span id="cart-count" class="badge">0</span></a>
+        <div class="nav-drop">
+          <a href="page.html?p=about" class="${infoActive}">Info <span class="caret">▾</span></a>
+          <div class="drop drop-info">
+            <a href="page.html?p=about">💕 About me</a><a href="markets.html">📍 Markets</a><a href="faq.html">❓ FAQ</a>
+            <a href="contact.html">💌 Contact</a><a href="order.html">📦 Check my order</a>
+          </div>
+        </div>
+        <span class="nav-info-mobile">
+          ${link("page.html?p=about", "About me", "about")}${link("markets.html", "Markets", "markets")}${link("faq.html", "FAQ", "faq")}
+          ${link("contact.html", "Contact", "contact")}${link("order.html", "Check my order", "order")}
+        </span>
       </nav>
     </div>`;
+  const btn = document.getElementById("menu-btn"), nav = document.getElementById("main-nav");
+  btn.onclick = () => { const open = nav.classList.toggle("open"); btn.setAttribute("aria-expanded", open); btn.textContent = open ? "✕" : "☰"; };
   const socials = [
     safeUrl(s.instagram_url) && `<a href="${esc(s.instagram_url)}" target="_blank" rel="noopener">Instagram</a>`,
     safeUrl(s.tiktok_url) && `<a href="${esc(s.tiktok_url)}" target="_blank" rel="noopener">TikTok</a>`,
@@ -160,7 +176,7 @@ function paintCategoryMenu(active) {
     if (!menu) return;
     menu.innerHTML = `<a href="index.html#shop">🛍️ Shop all</a>` + cats.map((c) => `<a href="category.html?c=${encodeURIComponent(c.slug)}">${esc(c.emoji || "")} ${esc(c.name)}</a>`).join("");
     // phones: category links sit right in the scrolling menu
-    mob.innerHTML = cats.map((c) => `<a href="category.html?c=${encodeURIComponent(c.slug)}" class="${active === "cat-" + c.slug ? "active" : ""}">${esc(c.name.replace(/^Pipe Cleaner /i, ""))}</a>`).join("");
+    mob.innerHTML = `<a href="index.html#shop">🛍️ Shop all</a>` + cats.map((c) => `<a href="category.html?c=${encodeURIComponent(c.slug)}" class="${active === "cat-" + c.slug ? "active" : ""}">${esc(c.emoji || "")} ${esc(c.name)}</a>`).join("");
   };
   let cached = []; try { cached = JSON.parse(localStorage.getItem("menu_cats")) || []; } catch {}
   paint(cached);

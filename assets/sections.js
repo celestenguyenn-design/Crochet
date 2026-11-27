@@ -32,6 +32,19 @@ export const SECTION_TYPES = {
       { key: "button2_link", label: "Button 2 link", type: "text", default: "custom.html" },
     ],
   },
+  perks: {
+    label: "Perks row", icon: "🚚", desc: "Little icons that build trust: shipping, handmade, payments…",
+    fields: [
+      { key: "items", label: "One perk per line: emoji, then text", type: "textarea", default: "🧶 Handmade with love\n📦 Ships in up to 2 weeks\n📍 Local pickup available\n💌 Custom orders welcome" },
+    ],
+  },
+  preorders: {
+    label: "Pre-orders", icon: "🧸", desc: "Your pre-order items (mark them in Products → Edit)",
+    fields: [
+      { key: "title", label: "Title", type: "text", default: "pre-orders! ˙⋆✮⋆˚" },
+      { key: "body", label: "Text (optional)", type: "textarea", default: "Reserve yours now — I'll make it just for you." },
+    ],
+  },
   products: {
     label: "Featured products", icon: "⭐", desc: "A row of best sellers, a category, or newest items",
     fields: [
@@ -178,14 +191,14 @@ export function productCard(p) {
     : photos.length ? `<img class="img" src="${esc(photos[0])}" alt="${esc(p.name)}" loading="lazy">` : `<div class="img"></div>`;
   const hasOptions = (p.options || []).some((o) => o.values?.length);
   const from = hasOptions && p.options.some((o) => o.values.some((v) => v.price_delta_cents)) ? "From " : "";
-  return `<div class="product">${p.featured ? `<span class="ribbon">★ Best seller</span>` : ""}
+  return `<div class="product">${p.preorder ? `<span class="ribbon pre">PRE-ORDER</span>` : p.featured ? `<span class="ribbon">★ Best seller</span>` : ""}
     <a href="product.html?id=${p.id}" class="img-link">${img}</a><div class="body">
     <h3><a href="product.html?id=${p.id}">${esc(p.name)}</a></h3><div class="price">${from}${money(p.price_cents)}</div>
     ${isLocked(p) ? `<div class="drop-tag">🔒 Drops ${esc(dropLabel(p.drop_at))}</div><div class="countdown" data-countdown="${esc(p.drop_at)}"></div><button class="btn" disabled>Coming soon</button>` : `
-    <div class="stock">${p.digital ? "📄 Digital file (PDF)" : p.stock === null ? "Made to order" : soldOut ? "Sold out" : `${p.stock} available`}</div>
+    <div class="stock">${p.digital ? "📄 Digital file (PDF)" : p.preorder ? `🧸 Pre-order${p.ships_by ? ` · ships ${esc(p.ships_by)}` : ""}` : p.stock === null ? "Made to order" : soldOut ? "Sold out" : `${p.stock} available`}</div>
     ${soldOut ? `<button class="btn" disabled>Sold out</button>`
       : hasOptions ? `<a class="btn" href="product.html?id=${p.id}">Choose options</a>`
-      : `<button class="btn" data-add="${p.id}">Add to cart</button>`}`}
+      : `<button class="btn" data-add="${p.id}">${p.preorder ? "Pre-order" : "Add to cart"}</button>`}`}
   </div></div>`;
 }
 const head = (t) => (t ? `<h2 class="section-title">${esc(t)}</h2>` : "");
@@ -250,6 +263,17 @@ export const RENDER = {
     if (!vids.length) return d.preview ? `<section>${head(s.title)}<p class="muted">(Paste an Instagram reel link or upload a video.)</p></section>` : "";
     return `<section>${head(s.title)}${s.body ? `<p class="center" style="max-width:640px;margin:0 auto 18px">${esc(s.body)}</p>` : ""}
       <div class="vids vids-${vids.length}">${vids.join("")}</div></section>`;
+  },
+  perks(s) {
+    const items = String(s.items || "").split("\n").map((l) => l.trim()).filter(Boolean).slice(0, 6);
+    if (!items.length) return "";
+    return `<section class="perks">${items.map((l) => { const [ic, ...rest] = l.split(" "); const isIcon = /\p{Extended_Pictographic}/u.test(ic);
+      return `<div class="perk"><span class="perk-ic">${isIcon ? esc(ic) : "✨"}</span><span>${esc(isIcon ? rest.join(" ") : l)}</span></div>`; }).join("")}</section>`;
+  },
+  preorders(s, d) {
+    const list = d.products.filter((p) => p.preorder && p.stock !== 0);
+    if (!list.length) return d.preview ? `<section>${head(s.title)}<p class="muted">(Mark products as pre-order in Products → Edit.)</p></section>` : "";
+    return `<section>${head(s.title)}${s.body ? `<p class="muted" style="margin-top:-6px">${esc(s.body)}</p>` : ""}<div class="grid">${list.map(productCard).join("")}</div></section>`;
   },
   drop(s, d) {
     const upcoming = d.products.filter(isLocked).sort((a, b) => new Date(a.drop_at) - new Date(b.drop_at));

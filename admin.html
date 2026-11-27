@@ -425,7 +425,16 @@ async function loadRequests() {
     const { data: urls } = await sb.storage.from("request-photos").createSignedUrls(allPaths, 3600);
     (urls || []).forEach((u) => { if (u.signedUrl) signed[u.path] = u.signedUrl; });
   }
-  el.innerHTML = `<div class="list">${data.length ? data.map((r) => `<div class="card">
+  const open = settings.custom_open !== false;
+  el.innerHTML = `<form id="custom-switch" class="card" style="margin-bottom:18px; border:2px solid ${open ? "#7ccf8e" : "#f0a0a0"}">
+      <div class="head"><h2 style="margin:0">${open ? "🟢 Custom orders are OPEN" : "🔴 Custom orders are CLOSED"}</h2>
+        <button type="button" class="btn ${open ? "danger" : ""}" id="toggle-custom">${open ? "Close custom orders" : "Reopen custom orders"}</button></div>
+      <p class="muted" style="margin:6px 0 0">When closed, the Custom Orders page shows your message instead of the form, and "Want it bigger?" links are hidden.</p>
+      <div class="row"><div><label>Closed until (optional)</label><input name="custom_reopen_text" value="${esc(settings.custom_reopen_text)}" placeholder="e.g. summer break, May 2027"></div>
+        <div><label>&nbsp;</label><button class="btn small secondary">Save message</button></div></div>
+      <label>Message shown while closed</label><textarea name="custom_closed_message" style="min-height:70px">${esc(settings.custom_closed_message)}</textarea>
+    </form>
+    <div class="list">${data.length ? data.map((r) => `<div class="card">
     <div class="head"><h3>${esc(r.name)} ${r.kind ? `<span class="pill">${esc(r.kind)}</span>` : ""}</h3><span class="pill">${label(r.status)}</span></div>
     <div class="muted">${fmtDate(r.created_at)} · ${esc(r.email)} ${r.phone ? "· " + esc(r.phone) : ""}</div>
     <p style="white-space:pre-wrap">${esc(r.description)}</p>
@@ -440,6 +449,13 @@ async function loadRequests() {
       <a class="btn small secondary" href="mailto:${encodeURIComponent(r.email)}?subject=${encodeURIComponent("Your custom crochet request")}">Email customer</a>
       <button class="btn small danger" data-del="${r.id}">Delete</button></div>
   </div>`).join("") : `<p class="muted">No custom requests yet.</p>`}</div>`;
+  $("toggle-custom").onclick = async () => {
+    if (open && !confirm("Close custom orders? The request form will be hidden until you reopen.")) return;
+    await saveSettings({ custom_open: !open }); loadRequests();
+  };
+  $("custom-switch").addEventListener("submit", async (e) => {
+    e.preventDefault(); const f = Object.fromEntries(new FormData(e.target)); await saveSettings(f); loadRequests();
+  });
   el.querySelectorAll("[data-save]").forEach((b) => b.onclick = async () => {
     const c = b.closest(".card"), q = c.querySelector("[name=quote]").value;
     const { error } = await sb.from("custom_requests").update({ status: c.querySelector("[name=status]").value, quote_cents: q === "" ? null : toCents(q), admin_notes: c.querySelector("[name=admin_notes]").value }).eq("id", b.dataset.save);
@@ -478,7 +494,7 @@ async function loadProducts() {
     <div class="inline"><div><input id="new-cat" placeholder="New category name"></div><button class="btn small" id="add-cat">+ Add category</button></div></details>
     <p><button class="btn" id="new-product">+ Add product</button></p><div class="list">${data.map((p) => `<div class="card head" style="align-items:center">
     <div style="display:flex; gap:14px; align-items:center">${safeUrl(p.image_url) ? `<img class="thumb" src="${esc(p.image_url)}">` : `<div class="thumb"></div>`}
-    <div><b>${esc(p.name)}</b> ${p.featured ? `<span class="pill">★ Best seller</span>` : ""} ${p.active ? "" : `<span class="pill">Hidden</span>`}<br><span class="muted">${money(p.price_cents)} · ${p.stock === null ? "Made to order" : p.stock + " in stock"}${catName(p.category_id) ? " · " + esc(catName(p.category_id)) : ""}${(p.options || []).length ? " · has options" : ""}${p.digital ? (p.file_path ? " · 📄 PDF ready" : " · ⚠️ PDF not uploaded") : ""}${p.drop_at && new Date(p.drop_at) > new Date() ? " · ⏰ drops " + new Date(p.drop_at).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : ""}</span></div></div>
+    <div><b>${esc(p.name)}</b> ${p.featured ? `<span class="pill">★ Best seller</span>` : ""} ${p.active ? "" : `<span class="pill">Hidden</span>`}<br><span class="muted">${money(p.price_cents)} · ${p.stock === null ? "Made to order" : p.stock + " in stock"}${catName(p.category_id) ? " · " + esc(catName(p.category_id)) : ""}${(p.options || []).length ? " · has options" : ""}${p.digital ? (p.file_path ? " · 📄 PDF ready" : " · ⚠️ PDF not uploaded") : ""}${p.preorder ? " · 🧸 pre-order" : ""}${p.drop_at && new Date(p.drop_at) > new Date() ? " · ⏰ drops " + new Date(p.drop_at).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : ""}</span></div></div>
     <span><button class="btn small secondary" data-share="${p.id}" title="Copy a link that shows a photo preview in Messenger, Facebook, iMessage…">🔗 Share link</button> <button class="btn small secondary" data-edit="${p.id}">Edit</button></span></div>`).join("") || `<p class="muted">No products yet. Add your first one!</p>`}</div>`;
   el.querySelectorAll("[data-share]").forEach((b) => b.onclick = async () => {
     await navigator.clipboard.writeText((settings.site_url || "").replace(/\/?$/, "/") + "p/" + b.dataset.share + ".html");
@@ -523,6 +539,9 @@ function productDialog(p) {
       <input type="file" accept="application/pdf,.pdf,.zip" id="pdf-upload" style="margin-top:6px">
       <input type="hidden" name="file_path" value="${esc(p.file_path)}">
     </div>
+    <div class="row"><div><label style="font-weight:700"><input type="checkbox" name="preorder" ${p.preorder ? "checked" : ""}>🧸 Pre-order</label>
+      <p class="muted" style="margin:0;font-size:.85rem">Shows a PRE-ORDER badge. Use the quantity box above to limit spots.</p></div>
+      <div><label>Ready / ships by</label><input name="ships_by" value="${esc(p.ships_by)}" placeholder="e.g. mid-January" maxlength="60"></div></div>
     <label>⏰ Drop date & time (optional)</label><input name="drop_at" type="datetime-local" value="${p.drop_at ? new Date(new Date(p.drop_at).getTime() - new Date().getTimezoneOffset() * 6e4).toISOString().slice(0, 16) : ""}">
     <p class="muted" style="margin:4px 0 0; font-size:.9rem">Leave blank to sell now. If set, the item shows a countdown and can't be bought until then.</p>
     <label>Category</label><select name="category_id"><option value="">— None —</option>${categories.map((c) => `<option value="${c.id}" ${c.id === p.category_id ? "selected" : ""}>${esc(c.name)}</option>`).join("")}</select>
@@ -594,7 +613,8 @@ function productDialog(p) {
       sort_order: parseInt(f.get("sort_order")) || 0, active: f.get("active") === "on", featured: f.get("featured") === "on",
       category_id: f.get("category_id") || null, images: extras, options: readOptions(),
       drop_at: f.get("drop_at") ? new Date(f.get("drop_at")).toISOString() : null,
-      digital: f.get("digital") === "on", file_path: f.get("file_path") || "" };
+      digital: f.get("digital") === "on", file_path: f.get("file_path") || "",
+      preorder: f.get("preorder") === "on", ships_by: (f.get("ships_by") || "").trim() };
     if (row.digital) row.stock = null;
     const { error } = p.id ? await sb.from("products").update(row).eq("id", p.id) : await sb.from("products").insert(row);
     toast(error ? error.message : "Saved"); loadProducts();
@@ -1053,6 +1073,7 @@ function patternDialog(p) {
 
 // ---------- Appearance ----------
 const PRESETS = {
+  "Cozy cream": { color_primary: "#e8956b", color_accent: "#ffd8a8", color_background: "#fff5e9", color_text: "#5c4637", color_card: "#fffaf4", font_heading: "Grandstander", font_body: "Maven Pro", corner_radius: 18 },
   "Pastel bubbly": { color_primary: "#e27aa8", color_accent: "#d9c6f5", color_background: "#fff6fa", color_text: "#5b4463", color_card: "#ffffff", font_heading: "Fredoka", font_body: "Quicksand", corner_radius: 24 },
   "Rose (default)": { color_primary: "#c06c84", color_accent: "#f8b195", color_background: "#fff8f3", color_text: "#3d2c34", color_card: "#ffffff" },
   "Sage": { color_primary: "#5f7f5a", color_accent: "#c9d8b6", color_background: "#f7f6ef", color_text: "#2f3a2c", color_card: "#ffffff" },
@@ -1072,6 +1093,9 @@ function loadAppearance() {
       <div><label>Corner roundness: <span id="rv">${s.corner_radius}</span>px</label><input type="range" name="corner_radius" min="0" max="40" value="${s.corner_radius}"></div></div>
     <div class="row"><div><label>Heading font</label><select name="font_heading">${fontOpts(s.font_heading)}</select></div>
       <div><label>Body font</label><select name="font_body">${fontOpts(s.font_body)}</select></div></div>
+    <label>Header style</label><select name="header_style">
+      <option value="centered" ${(s.header_style || "centered") === "centered" ? "selected" : ""}>Big centered logo, menu underneath</option>
+      <option value="classic" ${s.header_style === "classic" ? "selected" : ""}>Logo on the left, menu on the right</option></select>
     <h2 style="margin-top:28px">Branding</h2>
     <label>Shop name</label><input name="shop_name" value="${esc(s.shop_name)}">
     ${imgField("logo_url", "Logo (optional — replaces the shop name in the header)", s.logo_url)}

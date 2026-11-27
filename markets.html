@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Markets</title>
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="assets/favicon-32.png" sizes="32x32">
+<link rel="apple-touch-icon" href="assets/favicon.png">
+<link rel="stylesheet" href="assets/style.css">
+<!--og-->
+<meta name="description" content="Pickup, shipping, payments and custom orders — answered.">
+<link rel="canonical" href="https://celestenguyenn-design.github.io/Crochet/faq.html">
+<meta property="og:site_name" content="hookedbyceleste">
+<meta property="og:type" content="website">
+<meta property="og:title" content="FAQ | hookedbyceleste">
+<meta property="og:description" content="Pickup, shipping, payments and custom orders — answered.">
+<meta property="og:url" content="https://celestenguyenn-design.github.io/Crochet/faq.html">
+<meta property="og:image" content="https://vujfyzsbuagarlhtyebs.supabase.co/storage/v1/object/public/images/1795728217322-x5mzgy.png">
+<meta name="twitter:image" content="https://vujfyzsbuagarlhtyebs.supabase.co/storage/v1/object/public/images/1795728217322-x5mzgy.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="FAQ | hookedbyceleste">
+<meta name="twitter:description" content="Pickup, shipping, payments and custom orders — answered.">
+
+<!--/og-->
+</head>
+<body>
+<header id="site-header"></header>
+<main class="container article"><h1>📍 Find me at markets</h1>
+<p class="muted">Come say hi in person! Pre-orders can be picked up at any of these.</p>
+<div id="events" class="events" style="grid-template-columns:1fr"><p class="muted">Loading…</p></div>
+<div class="notice center" style="margin-top:28px"><p>Can't make it? Shop online or request something custom.</p><a class="btn" href="index.html#shop">Shop now</a> <a class="btn secondary" href="custom.html">Custom orders</a></div></main>
+<script type="module">
+import { sb, getSettings, renderChrome } from "./assets/common.js";
+import { eventCard } from "./assets/sections.js";
+renderChrome(await getSettings(), "markets");
+const today = new Date().toISOString().slice(0, 10);
+const { data } = await sb.from("events").select("*").or(`ends_on.gte.${today},and(ends_on.is.null,starts_on.gte.${today})`).order("starts_on");
+document.getElementById("events").innerHTML = data?.length ? data.map(eventCard).join("") : `<div class="card center"><p>No markets scheduled right now — follow me on Instagram for the next one! 💕</p></div>`;
+</script>
+<footer id="site-footer"></footer>
+</body>
+</html>

@@ -33,22 +33,25 @@ else {
       ${photos.length > 1 ? `<div class="thumbs">${photos.map((u, i) => `<button class="${i ? "" : "active"}" data-src="${esc(u)}"><img src="${esc(u)}" alt=""></button>`).join("")}</div>` : ""}
     </div>
     <div class="pdp-info card">
-      ${p.featured ? `<span class="tag">★ Best seller</span>` : ""} ${p.categories ? `<span class="tag">${esc(p.categories.name)}</span>` : ""}
+      ${p.preorder ? `<span class="tag">🧸 PRE-ORDER</span>` : ""} ${p.featured ? `<span class="tag">★ Best seller</span>` : ""} ${p.categories ? `<span class="tag">${esc(p.categories.name)}</span>` : ""}
       <h1 style="margin-top:10px">${esc(p.name)}</h1>
       <div class="price big" id="price">${money(p.price_cents)}</div>
       ${opts.map((o, i) => `<label>${esc(o.name)}</label><div class="opt-group" data-opt="${i}">
         ${o.values.map((v) => `<button type="button" class="opt" data-label="${esc(v.label)}">${esc(v.label)}${v.price_delta_cents ? ` <small>(${v.price_delta_cents > 0 ? "+" : "−"}${money(Math.abs(v.price_delta_cents))})</small>` : ""}</button>`).join("")}</div>`).join("")}
       ${locked ? `<div class="drop-box"><b>🔒 Drops ${esc(dropLabel(p.drop_at))}</b><div class="countdown big" data-countdown="${esc(p.drop_at)}"></div></div>`
         : p.digital ? `<div class="digital-box">📄 <b>Digital file (PDF)</b> — not a physical item. Your download unlocks on your order page once your payment is confirmed.</div>`
+        : p.preorder ? `<div class="preorder-box">🧸 <b>Pre-order</b>${p.ships_by ? ` — ready ${esc(p.ships_by)}` : ""}. I'll make yours after you order${p.stock ? ` · only ${p.stock} spots left` : ""}.</div>`
         : `<div class="stock" style="margin:14px 0 6px">${p.stock === null ? "Made to order" : soldOut ? "Sold out" : `${p.stock} available`}</div>`}
-      <div class="inline" style="align-items:center">
-        <input id="qty" class="qty" type="number" ${p.digital ? "hidden" : ""} min="1" max="${p.stock ?? 100}" value="1" ${soldOut ? "disabled" : ""}>
-        <button class="btn" id="add" ${soldOut ? "disabled" : ""}>${locked ? "Coming soon" : soldOut ? "Sold out" : "Add to cart"}</button>
-        <button class="btn secondary small" id="share" type="button">🔗 Share</button>
+      ${p.digital || soldOut ? `<input id="qty" type="hidden" value="1">` : `<label style="margin-top:6px">Quantity</label>
+      <div class="qty-step"><button type="button" data-step="-1" aria-label="Less">−</button><input id="qty" type="number" min="1" max="${p.stock ?? 100}" value="1" aria-label="Quantity"><button type="button" data-step="1" aria-label="More">+</button></div>`}
+      <div class="buy-row">
+        <button class="btn secondary" id="add" ${soldOut ? "disabled" : ""}>${locked ? "Coming soon" : soldOut ? "Sold out" : p.preorder ? "Add pre-order to cart" : "Add to cart"}</button>
+        ${soldOut ? "" : `<button class="btn buy-now" id="buy-now">Buy it now</button>`}
       </div>
+      <p style="margin:10px 0 0"><button class="btn secondary small" id="share" type="button">🔗 Share</button></p>
       <p class="error" id="err"></p>
       ${s.order_note ? `<p class="order-note">⏳ ${esc(s.order_note)}</p>` : ""}
-      ${p.digital ? "" : `<a class="bigger-link" href="custom.html?item=${encodeURIComponent(p.name)}">📏 Want it bigger or in different colors? Request a custom version →</a>`}
+      ${p.digital || s.custom_open === false ? "" : `<a class="bigger-link" href="custom.html?item=${encodeURIComponent(p.name)}">📏 Want it bigger or in different colors? Request a custom version →</a>`}
       <div class="desc-full">${md(p.description)}</div>
     </div>
   </div>`;
@@ -76,14 +79,21 @@ else {
     document.getElementById("main-img").src = b.dataset.src;
     el.querySelectorAll(".thumbs button").forEach((x) => x.classList.toggle("active", x === b));
   });
-  document.getElementById("add").onclick = () => {
+  el.querySelectorAll("[data-step]").forEach((b) => b.onclick = () => {
+    const q = document.getElementById("qty"), max = Number(q.max) || 100;
+    q.value = Math.min(max, Math.max(1, (parseInt(q.value) || 1) + Number(b.dataset.step)));
+  });
+  const addToCart = () => {
     const missing = opts.find((o) => !chosen[o.name]);
-    if (missing) return (document.getElementById("err").textContent = `Please choose a ${missing.name.toLowerCase()}.`);
+    if (missing) { document.getElementById("err").textContent = `Please choose a ${missing.name.toLowerCase()}.`; return false; }
     const qty = Math.max(1, parseInt(document.getElementById("qty").value) || 1);
-    if (p.stock !== null && cart.countOf(p.id) + qty > p.stock) return toast(`Only ${p.stock} available`);
+    if (p.stock !== null && !p.digital && cart.countOf(p.id) + qty > p.stock) { toast(`Only ${p.stock} available`); return false; }
     cart.add(p, qty, { ...chosen });
-    toast(`Added ${p.name} to cart`);
+    return true;
   };
+  document.getElementById("add").onclick = () => { if (addToCart()) toast(`Added ${p.name} to cart`); };
+  const buy = document.getElementById("buy-now");
+  if (buy) buy.onclick = () => { if (addToCart()) location.href = "cart.html"; };
 }
 </script>
 <footer id="site-footer"></footer>
