@@ -6,7 +6,7 @@
 <title>Cart</title>
 <link rel="icon" href="assets/icon/favicon-32.png" sizes="32x32">
 <link rel="apple-touch-icon" href="assets/icon/apple-touch.png">
-<link rel="stylesheet" href="assets/style.css?v=20261127071604">
+<link rel="stylesheet" href="assets/style.css?v=20261127075508">
 </head>
 <body>
 <header id="site-header"></header>
@@ -53,8 +53,8 @@
   <div id="done-view" class="article" style="display:none"></div>
 </main>
 <script type="module">
-import { sb, getSettings, renderChrome, esc, money, safeUrl, cart } from "./assets/common.js?v=20261127071604";
-import { SUPABASE_URL, SUPABASE_KEY } from "./assets/config.js?v=20261127071604";
+import { sb, getSettings, renderChrome, esc, money, safeUrl, cart } from "./assets/common.js?v=20261127075508";
+import { SUPABASE_URL, SUPABASE_KEY } from "./assets/config.js?v=20261127075508";
 const s = await getSettings();
 renderChrome(s, "cart");
 const $ = (id) => document.getElementById(id);
