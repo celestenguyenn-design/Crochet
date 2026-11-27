@@ -655,7 +655,7 @@ body::after { content: ""; position: fixed; inset: -200px 0 0; z-index: -1; poin
 @media (prefers-reduced-motion: reduce) { body::after { animation: none; } }
 
 /* Every other homepage section sits on a soft frosted panel so the page has rhythm */
-#home > .home-section:nth-child(even) > section { background: color-mix(in srgb, var(--card) 72%, transparent);
+#home > .home-section:is([data-type=perks],[data-type=products],[data-type=instagram],[data-type=testimonials],[data-type=shop],[data-type=faq]) > section { background: color-mix(in srgb, var(--card) 72%, transparent);
   border-radius: 36px; padding: 30px clamp(14px, 3vw, 34px);
   box-shadow: 0 10px 30px color-mix(in srgb, var(--primary) 12%, transparent); border: 2px solid color-mix(in srgb, var(--card) 90%, transparent); }
 
@@ -736,3 +736,7 @@ body::after { content: ""; position: fixed; inset: -200px 0 0; z-index: -1; poin
   #mini-header .cart-top { margin-left: 0; padding: 6px 10px; }
   #mini-header .cart-word { display: none; }
 }
+
+/* Pre-orders: a soft pastel card so it stands out from the pink background (not a plain white block) */
+#home > .home-section[data-type=preorders] > section { background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 45%, var(--bg)), color-mix(in srgb, var(--primary) 22%, var(--bg)));
+  border: 2px dashed color-mix(in srgb, var(--primary) 45%, transparent); border-radius: 36px; padding: 26px clamp(14px, 3vw, 34px); }

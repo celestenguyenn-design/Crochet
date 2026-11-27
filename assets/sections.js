@@ -51,7 +51,7 @@ export const SECTION_TYPES = {
     label: "Pre-orders", icon: "🧸", desc: "Your pre-order items (mark them in Products → Edit)",
     fields: [
       { key: "title", label: "Title", type: "text", default: "pre-orders! ˙⋆✮⋆˚" },
-      { key: "body", label: "Text (optional)", type: "textarea", default: "Reserve yours now and I'll make it just for you." },
+      { key: "body", label: "Text (optional)", type: "textarea", default: "" },
     ],
   },
   products: {
@@ -410,7 +410,9 @@ export function patternCard(p) {
 
 export function renderSections(sections, data) {
   return (sections || []).filter((s) => s.enabled && RENDER[s.type])
-    .map((s) => `<div class="home-section" data-section="${s.id}">${RENDER[s.type]({ ...defaultsFor(s.type), ...s.settings }, data)}</div>`).join("");
+    .map((s) => { const html = RENDER[s.type]({ ...defaultsFor(s.type), ...s.settings }, data);
+      // Sections with nothing to show (e.g. no pre-orders right now) leave no empty gap.
+      return html ? `<div class="home-section" data-section="${s.id}" data-type="${s.type}">${html}</div>` : ""; }).join("");
 }
 function defaultsFor(type) {
   const o = {};
