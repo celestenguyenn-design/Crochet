@@ -321,7 +321,7 @@ function orderCard(o) {
         <h4>Money</h4>
         ${row("Subtotal", money(o.subtotal_cents ?? o.total_cents))}
         ${o.discount_cents ? row(`Discount code <b>${esc(o.discount_code)}</b>`, "−" + money(o.discount_cents), "good") : ""}
-        ${ship ? row("Shipping", o.shipping_pending ? "Not set yet" : o.shipping_cents ? money(o.shipping_cents) : "Free", o.shipping_pending ? "owe" : "") : ""}
+        ${ship ? row("Shipping", o.shipping_pending && o.payment_status !== "paid" ? "Not set yet" : o.shipping_cents ? money(o.shipping_cents) : o.payment_status === "paid" ? "Included" : "Free", o.shipping_pending ? "owe" : "") : ""}
         ${row("Total", money(o.total_cents), "big")}
         ${o.deposit_cents && o.deposit_cents < o.total_cents ? row(`Deposit required`, money(o.deposit_cents)) : ""}
         ${row("Paid so far", money(paidAmt))}
