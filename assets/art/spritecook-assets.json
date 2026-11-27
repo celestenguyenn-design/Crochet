@@ -54,5 +54,12 @@
     "anim_file": "girl-sleepy-anim.webp",
     "anim_sha12": "f7f8e5eb4679"
   },
-  "_note": "Full-size originals of every animation are in originals/. Reuse these asset IDs for new poses/animations instead of regenerating."
+  "_note": "Full-size originals of every animation are in originals/. Reuse these asset IDs for new poses/animations instead of regenerating.",
+  "girl-goodbye": {
+    "still": "acf61d35-5033-42ff-ba27-2d59f57cb58f",
+    "sha12": "a90be287d95f",
+    "animation": "426aa29f-e8d7-42ec-b4b4-00ddbf58aa4f",
+    "anim_file": "girl-goodbye-anim.webp",
+    "anim_sha12": "227935222171"
+  }
 }

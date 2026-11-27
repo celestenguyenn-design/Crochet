@@ -38,7 +38,7 @@ export const SECTION_TYPES = {
       { key: "title", label: "Title", type: "text", default: "What I make" },
       { key: "cap1", label: "Kitty caption (Crochet)", type: "text", default: "Crochet plushies" },
       { key: "cap2", label: "Flower gift caption (Flowers)", type: "text", default: "Forever flowers" },
-      { key: "cap3", label: "Baker caption (Clay)", type: "text", default: "Clay charms" },
+      { key: "cap3", label: "Baker caption (Clay)", type: "text", default: "Polymer clay" },
     ],
   },
   perks: {

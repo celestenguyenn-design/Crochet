@@ -25,7 +25,7 @@ const defaultImage = abs(
   sections.find((s) => s.type === "image_banner" && s.enabled)?.settings?.image ||
   sections.find((s) => s.type === "hero" && s.enabled)?.settings?.image || settings.logo_url || "assets/photos/orange-dragon-plush.jpg");
 const shop = settings.shop_name || "My Shop";
-const tagline = "Handmade crochet plushies, pipe cleaner flower bouquets & polymer clay keychains. Custom orders welcome!";
+const tagline = "Handmade crochet plushies, pipe cleaner flower bouquets & polymer clay. Custom orders welcome!";
 
 const [products, categories, patterns, pages] = await Promise.all([
   get("products?active=eq.true&select=id,name,description,price_cents,image_url,images,stock,drop_at"),
@@ -92,7 +92,7 @@ for (const dir of ["p", "pt", "c"]) {
 const main = {
   "index.html": [shop, tagline],
   "patterns.html": [`Free crochet patterns | ${shop}`, "Free crochet patterns with step-by-step photos."],
-  "custom.html": [`Custom orders | ${shop}`, "Request a custom crochet plushie, flower bouquet or clay keychain."],
+  "custom.html": [`Custom orders | ${shop}`, "Request a custom crochet plushie, flower bouquet or polymer clay piece."],
   "contact.html": [`Contact | ${shop}`, `Questions about an order or a custom piece? Get in touch with ${shop}.`],
   "faq.html": [`FAQ | ${shop}`, "Pickup, shipping, payments and custom orders — answered."],
 };
