@@ -106,6 +106,7 @@ export function renderChrome(s, active, pages = null) {
       </nav>
     </div>`;
   const btn = document.getElementById("menu-btn"), nav = document.getElementById("main-nav");
+  setupMiniHeader();
   // On phones, tapping "Shop ▾" or "Info ▾" opens its list instead of leaving the page.
   nav.querySelectorAll(".nav-drop > a").forEach((a) => a.addEventListener("click", (e) => {
     if (!matchMedia("(max-width: 640px)").matches) return;
@@ -140,6 +141,37 @@ export function renderChrome(s, active, pages = null) {
   setupAds(s);
   setupSignupPopup(s);
   setupStats(s);
+}
+
+// ---------- Small header that slides in after you scroll past the big one ----------
+// The big header never changes size (changing it made the page jump and flicker).
+// Instead, once it's scrolled off screen, a separate small bar slides down on top.
+function setupMiniHeader() {
+  if (window.__miniWired || !("IntersectionObserver" in window)) return;
+  window.__miniWired = true;
+  const hdr = document.getElementById("site-header");
+  const bar = document.createElement("div");
+  bar.id = "mini-header"; bar.setAttribute("aria-hidden", "true");
+  document.body.appendChild(bar);
+  let built = false;
+  const build = () => {
+    const logo = hdr.querySelector(".logo")?.cloneNode(true);
+    const nav = hdr.querySelector("#main-nav")?.cloneNode(true);
+    const cart = hdr.querySelector(".cart-top")?.cloneNode(true);
+    [logo, nav, cart].forEach((n) => n?.querySelectorAll("[id]").forEach((x) => x.removeAttribute("id")));
+    nav?.removeAttribute("id"); nav?.classList.add("mini-nav");
+    const menu = document.createElement("button"); menu.className = "mini-menu"; menu.type = "button"; menu.textContent = "☰"; menu.setAttribute("aria-label", "Menu");
+    menu.onclick = () => { scrollTo({ top: 0, behavior: "smooth" }); setTimeout(() => document.getElementById("menu-btn")?.click(), 350); };
+    bar.innerHTML = ""; bar.append(menu, logo || "", nav || "", cart || "");
+    const count = document.getElementById("cart-count"), mini = bar.querySelector(".badge");
+    if (count && mini) new MutationObserver(() => (mini.textContent = count.textContent)).observe(count, { childList: true, characterData: true, subtree: true });
+    built = true;
+  };
+  new IntersectionObserver(([e]) => {
+    const show = !e.isIntersecting && e.boundingClientRect.top < 0;
+    if (show && !built) build();
+    bar.classList.toggle("show", show); bar.setAttribute("aria-hidden", String(!show));
+  }).observe(hdr);
 }
 
 // ---------- Animated browser-tab icon (mascot face; the old yarn-ball set is in icon/yarn/) ----------

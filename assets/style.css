@@ -715,3 +715,24 @@ body::after { content: ""; position: fixed; inset: -200px 0 0; z-index: -1; poin
 /* The header scrolls away with the page instead of sticking to the top,
    so it never covers page titles and can't flicker. */
 #site-header { position: relative; }
+
+/* Small header that slides down after the big one scrolls away (it never moves the page) */
+#mini-header { position: fixed; top: 0; left: 0; right: 0; z-index: 60; display: flex; align-items: center; justify-content: center; gap: 14px;
+  padding: 6px 18px; background: var(--card); box-shadow: 0 6px 18px color-mix(in srgb, var(--primary) 16%, transparent);
+  transform: translateY(-110%); transition: transform .25s ease; pointer-events: none; }
+#mini-header.show { transform: none; pointer-events: auto; }
+#mini-header .logo { display: flex; align-items: center; gap: 8px; }
+#mini-header .logo-img.logo-anim { height: 42px !important; width: auto; }
+#mini-header .logo-text { font-size: 1rem; }
+#mini-header .mini-nav { display: flex; flex-wrap: nowrap; gap: 4px; align-items: center; }
+#mini-header .mini-nav .nav-cats, #mini-header .mini-nav .nav-info-mobile { display: none !important; }
+#mini-header .cart-top { position: static !important; margin-left: auto; }
+#mini-header .mini-menu { display: none; background: none; border: 0; font-size: 1.5rem; color: var(--text); cursor: pointer; }
+@media (min-width: 641px) { #mini-header .logo-text { display: none; } #mini-header .logo { margin-right: auto; } }
+@media (max-width: 640px) {
+  #mini-header { justify-content: space-between; padding: 6px 12px; }
+  #mini-header .mini-nav { display: none; }
+  #mini-header .mini-menu { display: block; }
+  #mini-header .cart-top { margin-left: 0; padding: 6px 10px; }
+  #mini-header .cart-word { display: none; }
+}
