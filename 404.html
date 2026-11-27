@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Page not found</title>
+<meta name="robots" content="noindex">
+<!-- This page can show up at any address, so point all links at the site's real home folder. -->
+<script>document.write('<base href="' + (location.pathname.startsWith("/Crochet/") ? "/Crochet/" : "/") + '">');</script>
+<link rel="icon" href="assets/icon/favicon-32.png" sizes="32x32">
+<link rel="stylesheet" href="assets/style.css?v=20261127081039">
+</head>
+<body>
+<header id="site-header"></header>
+<main class="container center" style="text-align:center">
+  <img src="assets/art/girl-sleepy-anim.webp" data-fb="assets/art/apng/girl-sleepy-anim.png" alt="" width="200" height="250" style="margin:0 auto;display:block">
+  <h1>Oops, this page is napping 💤</h1>
+  <p class="muted">We couldn't find that page. It may have moved, or the link has a typo.</p>
+  <p><a class="btn" href="index.html">Go to the homepage</a> <a class="btn secondary" href="category.html?c=crochet">Shop crochet</a></p>
+</main>
+<footer id="site-footer"></footer>
+<script type="module">
+import { getSettings, renderChrome } from "./assets/common.js?v=20261127081039";
+renderChrome(await getSettings(), "");
+</script>
+</body>
+</html>

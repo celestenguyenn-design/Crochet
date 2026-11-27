@@ -1,7 +1,7 @@
 // Homepage sections: what each section type is, what settings it has, and how it looks.
 // The admin "Homepage" tab builds its editor from SECTION_TYPES, and index.html renders them.
-import { esc, safeUrl, money, isLocked, dropLabel } from "./common.js?v=20261127075508";
-import { marked, DOMPurify } from "./vendor/markdown.js?v=20261127075508";
+import { esc, safeUrl, money, isLocked, dropLabel } from "./common.js?v=20261127081039";
+import { marked, DOMPurify } from "./vendor/markdown.js?v=20261127081039";
 
 export const md = (text) => DOMPurify.sanitize(marked.parse(text || ""));
 export const linkOk = (u) => /^(https?:\/\/|#|[a-z0-9_-]+\.html)/i.test(u || "");
@@ -186,7 +186,8 @@ export function videoEmbed(url) {
     return `<div class="vid vid-tt"><iframe src="https://www.tiktok.com/embed/v2/${m[1]}" loading="lazy" allowfullscreen title="TikTok video"></iframe></div>`;
   if ((m = u.match(/(?:youtube\.com\/(?:shorts\/|watch\?v=)|youtu\.be\/)([\w-]{6,})/i)))
     return `<div class="vid vid-yt"><iframe src="https://www.youtube-nocookie.com/embed/${m[1]}" loading="lazy" allowfullscreen title="YouTube video"></iframe></div>`;
-  if (safeUrl(u)) return `<div class="vid vid-file"><video src="${esc(u)}" controls playsinline preload="metadata"></video></div>`;
+  // Uploaded videos play by themselves (muted, looping) when scrolled into view. Tap to hear sound.
+  if (safeUrl(u)) return `<div class="vid vid-file"><video src="${esc(u)}" muted loop playsinline preload="metadata" data-autoplay controls></video></div>`;
   return "";
 }
 
@@ -394,6 +395,13 @@ export async function loadInstagram(root = document) {
       }).join("");
     } catch { el.closest("section")?.remove(); }
   }
+}
+// Start uploaded videos when they scroll into view, pause them when they leave (saves data and battery).
+export function wireAutoplay(root = document) {
+  const vids = root.querySelectorAll("video[data-autoplay]");
+  if (!vids.length || !("IntersectionObserver" in window) || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const io = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) e.target.play().catch(() => {}); else e.target.pause(); }), { threshold: 0.5 });
+  vids.forEach((v) => io.observe(v));
 }
 export function signupForm(button = "Sign me up", source = "") {
   return `<form class="signup-form" data-source="${esc(source)}"><input type="email" required placeholder="you@email.com" aria-label="Email">
