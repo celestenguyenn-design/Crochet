@@ -47,7 +47,8 @@ const [products, categories, gallery, reviews, faqs, patterns, events] = await P
   q("patterns", "slug,title,summary,cover_image_url,difficulty,published_at").eq("published", true).order("published_at", { ascending: false }).limit(12),
   q("events").or(`ends_on.gte.${today},and(ends_on.is.null,starts_on.gte.${today})`).order("starts_on").limit(20),
 ]).then((rs) => rs.map((r) => r.data || []));
-const data = { products, categories, gallery, reviews, faqs, patterns, events, settings: s, preview };
+// A pre-order that's fully claimed (no spots left) disappears from the homepage completely.
+const data = { products: products.filter((p) => !(p.preorder && p.stock === 0)), categories, gallery, reviews, faqs, patterns, events, settings: s, preview };
 
 // Older setups without saved sections get a sensible default layout.
 const fallback = () => ["hero", "products", "gallery", "shop", "testimonials", "faq"].map(newSection);

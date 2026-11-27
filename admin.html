@@ -587,7 +587,7 @@ function productDialog(p) {
       <input type="hidden" name="file_path" value="${esc(p.file_path)}">
     </div>
     <div class="row"><div><label style="font-weight:700"><input type="checkbox" name="preorder" ${p.preorder ? "checked" : ""}>🧸 Pre-order</label>
-      <p class="muted" style="margin:0;font-size:.85rem">Shows a PRE-ORDER badge. Use the quantity box above to limit spots.</p></div>
+      <p class="muted" style="margin:0;font-size:.85rem">Shows at the top of your homepage with a PRE-ORDER badge. Set the quantity above to how many spots you have (1 for a one-of-a-kind). When they're all ordered, it disappears from the homepage by itself.</p></div>
       <div><label>Ready / ships by</label><input name="ships_by" value="${esc(p.ships_by)}" placeholder="e.g. mid-January" maxlength="60"></div></div>
     <label>⏰ Drop date & time (optional)</label><input name="drop_at" type="datetime-local" value="${p.drop_at ? new Date(new Date(p.drop_at).getTime() - new Date().getTimezoneOffset() * 6e4).toISOString().slice(0, 16) : ""}">
     <p class="muted" style="margin:4px 0 0; font-size:.9rem">Leave blank to sell now. If set, the item shows a countdown and can't be bought until then.</p>
@@ -607,6 +607,11 @@ function productDialog(p) {
     <div class="inline"><button class="btn" value="save">Save</button><button class="btn secondary" value="cancel" formnovalidate>Cancel</button>
     ${p.id ? `<button class="btn danger" value="delete" formnovalidate style="margin-left:auto">Delete</button>` : ""}</div></form>`;
   wireUploads(d);
+  // Ticking "Pre-order" on an item with no quantity sets it to 1 spot, so it leaves the homepage once someone orders it.
+  d.querySelector("[name=preorder]")?.addEventListener("change", (e) => {
+    const q = d.querySelector("[name=stock]");
+    if (e.target.checked && q && q.value === "") { q.value = 1; toast("Set to 1 spot. Change it if you have more."); }
+  });
   // pattern PDF (private storage)
   d.querySelector("#pdf-upload").onchange = async (e) => {
     const file = e.target.files[0]; if (!file) return;
