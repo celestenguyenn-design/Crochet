@@ -6,7 +6,7 @@
 <title>Free Patterns</title>
 <link rel="icon" href="assets/icon/favicon-32.png" sizes="32x32">
 <link rel="apple-touch-icon" href="assets/icon/apple-touch.png">
-<link rel="stylesheet" href="assets/style.css">
+<link rel="stylesheet" href="assets/style.css?v=20261127063316">
 <!--og-->
 <meta name="description" content="Free crochet patterns with step-by-step photos.">
 <link rel="canonical" href="https://celestenguyenn-design.github.io/Crochet/patterns.html">
@@ -32,7 +32,7 @@
   <div id="list" class="grid"><p class="muted">Loading…</p></div>
 </main>
 <script type="module">
-import { sb, getSettings, renderChrome, esc, safeUrl } from "./assets/common.js";
+import { sb, getSettings, renderChrome, esc, safeUrl } from "./assets/common.js?v=20261127063316";
 renderChrome(await getSettings(), "patterns");
 const { data, error } = await sb.from("patterns").select("slug,title,summary,cover_image_url,difficulty,published_at").eq("published", true).order("published_at", { ascending: false });
 const box = document.getElementById("list");
