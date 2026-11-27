@@ -7,7 +7,7 @@
 <title>Admin</title>
 <link rel="icon" href="assets/icon/favicon-32.png" sizes="32x32">
 <link rel="apple-touch-icon" href="assets/icon/apple-touch.png">
-<link rel="stylesheet" href="assets/style.css?v=20261127063517">
+<link rel="stylesheet" href="assets/style.css?v=20261127065118">
 <style>
   .tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 24px; }
   .tabs button { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 8px 14px; font: inherit; font-weight: 700; cursor: pointer; color: var(--text); }
@@ -137,8 +137,8 @@
 <dialog id="dlg"></dialog>
 
 <script type="module">
-import { sb, getSettings, applyTheme, esc, money, safeUrl, toast, FONTS } from "./assets/common.js?v=20261127063517";
-import { SECTION_TYPES, newSection } from "./assets/sections.js?v=20261127063517";
+import { sb, getSettings, applyTheme, esc, money, safeUrl, toast, FONTS } from "./assets/common.js?v=20261127065118";
+import { SECTION_TYPES, newSection } from "./assets/sections.js?v=20261127065118";
 
 let settings = await getSettings();
 const $ = (id) => document.getElementById(id);
@@ -298,7 +298,7 @@ async function loadOrders() {
   });
 }
 function orderCard(o) {
-  const pm = { zelle: "Zelle", venmo: "Venmo", paypal: "PayPal", pickup: "Pay at pickup" }[o.payment_method];
+  const pm = { zelle: "Zelle", venmo: "Venmo", paypal: "PayPal", pickup: "Pay at pickup", card: "Card (Stripe, marks itself paid)" }[o.payment_method];
   const owed = owedOf(o), paidAmt = o.amount_paid_cents || 0;
   const badge = o.payment_status === "refunded" ? `<div class="paybadge grey">REFUNDED</div>`
     : o.shipping_pending && o.payment_status !== "paid" ? `<div class="paybadge yellow">${paidAmt > 0 ? `PAID ${money(paidAmt)} · ` : ""}SHIPPING NOT PAID YET</div>`
@@ -1227,6 +1227,12 @@ function loadSettings() {
     <label>Deposit required (% of the total, paid before you start)</label>
     <input name="deposit_percent" type="number" min="0" max="100" value="${s.deposit_percent ?? 50}">
     <p class="muted" style="font-size:.9rem">50 = half up front, the rest at pickup/before shipping. 100 = pay everything up front. 0 = no deposit (then "Pay at pickup" can be offered).</p>
+    <h3 style="margin-top:22px">💳 Card payments (Stripe)</h3>
+    <label style="font-weight:400"><input type="checkbox" name="card_enabled" ${s.card_enabled ? "checked" : ""}>Let customers pay by card. Their order turns <b>Paid</b> by itself when the payment goes through.</label>
+    <p class="muted" style="font-size:.85rem;margin:4px 0">Stripe keeps about 2.9% + 30¢ of each card payment. Zelle and Venmo stay free.</p>
+    <div class="inline"><div style="max-width:170px"><label>Card fee customers pay (%)</label><input name="card_fee_percent" type="number" step="0.1" min="0" max="4" value="${s.card_fee_percent ?? 0}"></div>
+      <div style="max-width:170px"><label>+ fixed fee ($)</label><input name="card_fee_fixed" type="number" step="0.01" min="0" max="1" value="${((s.card_fee_fixed_cents || 0) / 100).toFixed(2)}"></div></div>
+    <p class="muted" style="font-size:.85rem;margin:4px 0">Leave both at 0 to cover the fee yourself. If you add a fee, it shows as its own line at checkout.</p>
     <label style="font-weight:400"><input type="checkbox" name="allow_pay_at_pickup" ${s.allow_pay_at_pickup ? "checked" : ""}>Allow "Pay at pickup" (only when no deposit is required)</label>
     <h2 style="margin-top:28px">Shipping</h2>
     <label style="font-weight:400"><input type="checkbox" name="allow_pickup" ${s.allow_pickup !== false ? "checked" : ""}>Offer local pickup</label>
@@ -1243,6 +1249,9 @@ function loadSettings() {
     e.preventDefault();
     const f = Object.fromEntries(new FormData(e.target));
     f.allow_pay_at_pickup = f.allow_pay_at_pickup === "on";
+    f.card_enabled = f.card_enabled === "on";
+    f.card_fee_percent = Math.max(0, Math.min(4, parseFloat(f.card_fee_percent) || 0));
+    f.card_fee_fixed_cents = Math.max(0, Math.min(100, toCents(f.card_fee_fixed))); delete f.card_fee_fixed;
     f.allow_pickup = f.allow_pickup === "on"; f.allow_shipping = f.allow_shipping === "on";
     if (!f.allow_pickup && !f.allow_shipping) return toast("Turn on pickup, shipping, or both");
     f.deposit_percent = Math.max(0, Math.min(100, parseInt(f.deposit_percent) || 0));

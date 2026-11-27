@@ -6,7 +6,7 @@
 <title>Cart</title>
 <link rel="icon" href="assets/icon/favicon-32.png" sizes="32x32">
 <link rel="apple-touch-icon" href="assets/icon/apple-touch.png">
-<link rel="stylesheet" href="assets/style.css?v=20261127063517">
+<link rel="stylesheet" href="assets/style.css?v=20261127065118">
 </head>
 <body>
 <header id="site-header"></header>
@@ -53,7 +53,8 @@
   <div id="done-view" class="article" style="display:none"></div>
 </main>
 <script type="module">
-import { sb, getSettings, renderChrome, esc, money, safeUrl, cart } from "./assets/common.js?v=20261127063517";
+import { sb, getSettings, renderChrome, esc, money, safeUrl, cart } from "./assets/common.js?v=20261127065118";
+import { SUPABASE_URL, SUPABASE_KEY } from "./assets/config.js?v=20261127065118";
 const s = await getSettings();
 renderChrome(s, "cart");
 const $ = (id) => document.getElementById(id);
@@ -75,6 +76,10 @@ function paintPay() {
   if (s.zelle_handle) opts.push(["zelle", "Zelle", `To <b>${esc(s.zelle_handle)}</b> · no fees`]);
   if (s.venmo_handle) opts.push(["venmo", "Venmo", `To <b>@${esc(s.venmo_handle.replace(/^@/, ""))}</b>`]);
   if (s.paypal_email) opts.push(["paypal", "PayPal", `To <b>${esc(s.paypal_email)}</b>`]);
+  if (s.card_enabled) {
+    const fee = Number(s.card_fee_percent || 0), fixed = Number(s.card_fee_fixed_cents || 0);
+    opts.push(["card", "Card", `Visa, Mastercard, Apple Pay & more · paid instantly${fee || fixed ? ` · adds a ${[fee ? fee + "%" : "", fixed ? money(fixed) : ""].filter(Boolean).join(" + ")} card fee` : ""}`]);
+  }
   if (!depositPct && s.allow_pay_at_pickup && fulfill() === "pickup") opts.push(["pickup", "Pay at pickup", "Cash or app when you pick up"]);
   const cur = document.querySelector("[name=pay]:checked")?.value;
   $("pay-options").innerHTML = opts.length
@@ -172,6 +177,16 @@ $("form").addEventListener("submit", async (e) => {
   });
   if (error) { err.textContent = error.message; btn.disabled = false; return; }
   cart.clear();
+  // Card: go straight to Stripe's secure payment page.
+  if (data.payment_method === "card") {
+    btn.textContent = "Opening secure card page…";
+    try {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/card-pay`, { method: "POST", headers: { "Content-Type": "application/json", apikey: SUPABASE_KEY },
+        body: JSON.stringify({ action: "start", order_number: data.order_number, email: f.get("email").trim() }) });
+      const r = await res.json();
+      if (r.url) { location.href = r.url; return; }
+    } catch {}
+  }
   const n = data.order_number, dueNow = data.deposit_cents || data.total_cents, rest = data.total_cents - dueNow;
   const amt = money(dueNow), what = data.deposit_cents && rest > 0 ? "deposit" : "payment";
   let payMsg = "";
@@ -183,6 +198,8 @@ $("form").addEventListener("submit", async (e) => {
   } else if (data.payment_method === "paypal") {
     payMsg = `<p>Send your <b>${amt} ${what}</b> by <b>PayPal</b> to <b>${esc(s.paypal_email)}</b> with <b>Order #${n}</b> in the note.</p>
       <p><a class="btn" href="https://www.paypal.com/myaccount/transfer/homepage/pay" target="_blank" rel="noopener">Open PayPal</a></p>`;
+  } else if (data.payment_method === "card") {
+    payMsg = `<p>The card payment page didn't open. <a href="order.html?n=${n}">Go to your order page</a> and tap <b>Pay by card</b> to try again.</p>`;
   } else payMsg = `<p>You'll pay <b>${money(data.total_cents)}</b> when you pick up.</p>`;
   const qr = safeUrl(s[data.payment_method + "_qr_url"]);
   if (qr) payMsg += `<div class="pay-qr"><img src="${esc(qr)}" alt="${esc(data.payment_method)} QR code"><p class="muted">Scan with your phone's camera or ${data.payment_method === "zelle" ? "your bank app" : "the app"} to pay</p></div>`;

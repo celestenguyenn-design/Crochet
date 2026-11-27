@@ -6,7 +6,7 @@
 <title>Order status</title>
 <link rel="icon" href="assets/icon/favicon-32.png" sizes="32x32">
 <link rel="apple-touch-icon" href="assets/icon/apple-touch.png">
-<link rel="stylesheet" href="assets/style.css?v=20261127063517">
+<link rel="stylesheet" href="assets/style.css?v=20261127065118">
 </head>
 <body>
 <header id="site-header"></header>
@@ -25,25 +25,42 @@
 </main>
 <footer id="site-footer"></footer>
 <script type="module">
-import { sb, getSettings, renderChrome, esc, money, safeUrl } from "./assets/common.js?v=20261127063517";
-import { SUPABASE_URL, SUPABASE_KEY } from "./assets/config.js?v=20261127063517";
+import { sb, getSettings, renderChrome, esc, money, safeUrl } from "./assets/common.js?v=20261127065118";
+import { SUPABASE_URL, SUPABASE_KEY } from "./assets/config.js?v=20261127065118";
 const s = await getSettings();
 renderChrome(s, "");
 const STEPS = [["new", "Received", "📝"], ["in_progress", "Being made", "🧶"], ["ready", "Ready for pickup", "🎀"], ["picked_up", "Picked up", "💖"]];
-const n = new URLSearchParams(location.search).get("n");
+const params = new URLSearchParams(location.search), n = params.get("n");
 if (n) document.querySelector("[name=n]").value = n;
+// Card payments (Stripe): ask the server to start a payment or check one.
+const cardPay = async (body) => {
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/card-pay`, { method: "POST", headers: { "Content-Type": "application/json", apikey: SUPABASE_KEY }, body: JSON.stringify(body) });
+  return res.json().catch(() => ({}));
+};
+// Coming back from the Stripe payment page.
+if (params.get("session_id")) {
+  const note = document.createElement("p"); note.className = "notice center"; note.textContent = "Checking your card payment…";
+  document.getElementById("form").before(note);
+  const r = await cardPay({ action: "confirm", session_id: params.get("session_id") });
+  note.innerHTML = r.payment_status ? `✅ <b>Payment received, thank you!</b> 💕 Enter your email below to see your order.` : `Your payment is still processing. Check back in a minute.`;
+  history.replaceState(null, "", `order.html?n=${encodeURIComponent(n || "")}`);
+}
 document.getElementById("form").addEventListener("submit", async (e) => {
   e.preventDefault();
   const f = new FormData(e.target), err = document.getElementById("err"), out = document.getElementById("result");
   err.textContent = ""; out.innerHTML = "";
-  const { data: o, error } = await sb.rpc("lookup_order", { p_order_number: parseInt(f.get("n")), p_email: f.get("email") });
+  let { data: o, error } = await sb.rpc("lookup_order", { p_order_number: parseInt(f.get("n")), p_email: f.get("email") });
   if (error || !o) { err.textContent = "We couldn't find that order. Double-check the number and email."; return; }
+  if (o.payment_method === "card" && o.payment_status !== "paid" && o.status !== "cancelled") {
+    await cardPay({ action: "check", order_number: o.order_number, email: f.get("email").trim() });
+    ({ data: o } = await sb.rpc("lookup_order", { p_order_number: o.order_number, p_email: f.get("email") }));
+  }
   const stepList = o.fulfillment === "digital" ? [STEPS[0], ["paid", "Payment confirmed", "💳"], ["dl", "Ready to download", "📄"]]
     : o.fulfillment === "shipping" ? [STEPS[0], STEPS[1], ["shipped", "Shipped", "📦"]] : STEPS;
   const idx = o.fulfillment === "digital" ? (o.payment_status === "paid" ? 2 : 0) : stepList.findIndex(([k]) => k === o.status);
   const steps = o.status === "cancelled" ? `<p class="notice"><b>This order was cancelled.</b> Message me if that's a surprise!</p>`
     : `<div class="steps" style="grid-template-columns:repeat(${stepList.length},1fr)">${stepList.map(([k, l, ic], i) => `<div class="step ${i <= idx ? "done" : ""} ${i === idx ? "current" : ""}"><span>${ic}</span>${l}</div>`).join("")}</div>`;
-  const app = { zelle: "Zelle", venmo: "Venmo", paypal: "PayPal" }[o.payment_method] || "app";
+  const app = { zelle: "Zelle", venmo: "Venmo", paypal: "PayPal", card: "card" }[o.payment_method] || "app";
   const owed = o.total_cents - (o.amount_paid_cents || 0);
   const paid = o.payment_status === "paid" ? "✅ Paid in full" : o.payment_status === "refunded" ? "Refunded"
     : o.payment_status === "deposit_paid" ? `✅ Deposit received · ${money(owed)} left to pay`
@@ -53,6 +70,7 @@ document.getElementById("form").addEventListener("submit", async (e) => {
   out.innerHTML = `<div class="card"><h2>Order #${o.order_number}</h2>${steps}
     <ul>${o.items.map((i) => `<li>${i.quantity} × ${esc(i.name)}</li>`).join("")}</ul>
     <p><b>Total: ${money(o.total_cents)}</b> · ${paid}</p>
+    ${o.payment_method === "card" && owed > 0 && o.status !== "cancelled" && !["paid", "refunded"].includes(o.payment_status) ? `<p><button class="btn" id="pay-card">💳 Pay ${money(o.payment_status === "unpaid" && o.deposit_cents && o.deposit_cents < o.total_cents ? o.deposit_cents : owed)} by card</button></p>` : ""}
     ${owed > 0 && o.status !== "cancelled" && safeUrl(s[o.payment_method + "_qr_url"]) ? `<div class="pay-qr"><img src="${esc(s[o.payment_method + "_qr_url"])}" alt="QR code to pay"><p class="muted">Scan to pay · put <b>Order #${o.order_number}</b> in the note</p></div>` : ""}
     ${o.status === "shipped" && o.tracking_number ? `<p class="notice"><b>Tracking:</b> <a href="https://tools.usps.com/go/TrackConfirmAction?tLabels=${encodeURIComponent(o.tracking_number)}" target="_blank" rel="noopener">${esc(o.tracking_number)}</a></p>` : ""}
     ${o.status === "ready" && o.fulfillment !== "shipping" ? `<p class="notice"><b>Pickup:</b> ${esc(s.pickup_location)}${s.pickup_instructions ? `<br>${esc(s.pickup_instructions)}` : ""}</p>` : ""}
@@ -60,6 +78,11 @@ document.getElementById("form").addEventListener("submit", async (e) => {
     <p class="muted">Ordered ${new Date(o.created_at).toLocaleDateString(undefined, { dateStyle: "medium" })}</p></div>
     <div id="review-box"></div>`;
   reviewForm(o, f.get("email").trim());
+  document.getElementById("pay-card")?.addEventListener("click", async (ev) => {
+    ev.target.disabled = true; ev.target.textContent = "Opening secure card page…";
+    const r = await cardPay({ action: "start", order_number: o.order_number, email: f.get("email").trim() });
+    if (r.url) location.href = r.url; else { ev.target.disabled = false; ev.target.textContent = "Try again"; err.textContent = r.error || "Card payment didn't open. Please try again."; }
+  });
   if (o.has_digital && o.payment_status === "paid") {
     const box = document.getElementById("downloads");
     try {
