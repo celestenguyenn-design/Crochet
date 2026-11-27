@@ -7,7 +7,7 @@
 <title>Admin</title>
 <link rel="icon" href="assets/icon/favicon-32.png" sizes="32x32">
 <link rel="apple-touch-icon" href="assets/icon/apple-touch.png">
-<link rel="stylesheet" href="assets/style.css?v=20261127065118">
+<link rel="stylesheet" href="assets/style.css?v=20261127070313">
 <style>
   .tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 24px; }
   .tabs button { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 8px 14px; font: inherit; font-weight: 700; cursor: pointer; color: var(--text); }
@@ -137,8 +137,8 @@
 <dialog id="dlg"></dialog>
 
 <script type="module">
-import { sb, getSettings, applyTheme, esc, money, safeUrl, toast, FONTS } from "./assets/common.js?v=20261127065118";
-import { SECTION_TYPES, newSection } from "./assets/sections.js?v=20261127065118";
+import { sb, getSettings, applyTheme, esc, money, safeUrl, toast, FONTS } from "./assets/common.js?v=20261127070313";
+import { SECTION_TYPES, newSection } from "./assets/sections.js?v=20261127070313";
 
 let settings = await getSettings();
 const $ = (id) => document.getElementById(id);
@@ -1099,6 +1099,8 @@ function patternDialog(p) {
     <div><label>Web address (slug)</label><input name="slug" value="${esc(p.slug)}" placeholder="auto from title"></div></div>
     ${imgField("cover_image_url", "Cover photo", p.cover_image_url)}
     <label>Materials (one per line)</label><textarea name="materials" placeholder="Worsted weight yarn&#10;4.0 mm hook&#10;Stitch marker">${esc(p.materials)}</textarea>
+    <label>🛒 Supply links (one per line)</label><textarea name="supplies" placeholder="2.5mm crochet hook | 2.5mm crochet hook&#10;Velvet yarn | https://www.amazon.com/dp/XXXXXXXX" style="min-height:90px">${esc(p.supplies || "")}</textarea>
+    <p class="muted" style="font-size:.85rem;margin:4px 0">Write <b>what it is | what to search on Amazon</b>, or paste an Amazon product link after the |. Your Associates ID (in Settings) is added automatically so you earn from purchases.</p>
     <label>Pattern</label>
     <p class="muted" style="margin:0 0 6px; font-size:.9rem">Tips: start a line with <code>## </code> for a section heading, <code>- </code> for a bullet, <code>**bold**</code> for bold. Upload a step photo below to insert it.</p>
     <textarea name="body" style="min-height:280px; font-family:monospace">${esc(p.body)}</textarea>
@@ -1124,7 +1126,7 @@ function patternDialog(p) {
     const published = f.get("published") === "on";
     const row = { title: f.get("title"), summary: f.get("summary"), difficulty: f.get("difficulty"),
       slug: slugify(f.get("slug") || f.get("title")) || "pattern-" + Date.now(), cover_image_url: f.get("cover_image_url"),
-      materials: f.get("materials"), body: f.get("body"), published, updated_at: new Date().toISOString(),
+      materials: f.get("materials"), supplies: f.get("supplies") || "", body: f.get("body"), published, updated_at: new Date().toISOString(),
       published_at: published ? (p.published_at || new Date().toISOString()) : p.published_at ?? null };
     const { error } = p.id ? await sb.from("patterns").update(row).eq("id", p.id) : await sb.from("patterns").insert(row);
     toast(error ? (error.code === "23505" ? "That web address is already used — pick another slug" : error.message) : "Saved");
@@ -1218,6 +1220,8 @@ function loadSettings() {
     <div class="row"><div><label>Zelle (email or phone)</label><input name="zelle_handle" value="${esc(s.zelle_handle)}"></div>
       <div><label>Venmo username</label><input name="venmo_handle" value="${esc(s.venmo_handle)}" placeholder="@yourname"></div></div>
     <label>PayPal email</label><input name="paypal_email" type="email" value="${esc(s.paypal_email)}">
+    <label>🛒 Amazon Associates tracking ID</label><input name="amazon_tag" value="${esc(s.amazon_tag || "")}" placeholder="e.g. hookedbyceleste-20" maxlength="40" pattern="[A-Za-z0-9_-]*">
+    <p class="muted" style="font-size:.85rem;margin:4px 0">Adds your ID to the "Supplies I use" links on your patterns, so you earn a small commission when people buy through them.</p>
     <p class="muted" style="font-size:.9rem; margin-top:14px">QR codes show on the thank-you screen and order-status page for whichever app the customer picked. Leave blank to hide.</p>
     <div class="row">
       <div>${imgField("zelle_qr_url", "Zelle QR code", s.zelle_qr_url)}</div>

@@ -6,15 +6,15 @@
 <title></title>
 <link rel="icon" href="assets/icon/favicon-32.png" sizes="32x32">
 <link rel="apple-touch-icon" href="assets/icon/apple-touch.png">
-<link rel="stylesheet" href="assets/style.css?v=20261127065118">
+<link rel="stylesheet" href="assets/style.css?v=20261127070313">
 </head>
 <body>
 <header id="site-header"></header>
 <main class="container" id="cat-page"><p class="muted">Loading…</p></main>
 <footer id="site-footer"></footer>
 <script type="module">
-import { sb, getSettings, renderChrome, esc, safeUrl, cart, toast, startCountdowns } from "./assets/common.js?v=20261127065118";
-import { productCard, wireCarousels, md } from "./assets/sections.js?v=20261127065118";
+import { sb, getSettings, renderChrome, esc, safeUrl, cart, toast, startCountdowns } from "./assets/common.js?v=20261127070313";
+import { productCard, wireCarousels, md } from "./assets/sections.js?v=20261127070313";
 const s = await getSettings();
 const slug = new URLSearchParams(location.search).get("c");
 const { data: c } = await sb.from("categories").select("*").eq("slug", slug).maybeSingle();

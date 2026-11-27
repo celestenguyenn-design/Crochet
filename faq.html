@@ -6,7 +6,7 @@
 <title>FAQ</title>
 <link rel="icon" href="assets/icon/favicon-32.png" sizes="32x32">
 <link rel="apple-touch-icon" href="assets/icon/apple-touch.png">
-<link rel="stylesheet" href="assets/style.css?v=20261127065118">
+<link rel="stylesheet" href="assets/style.css?v=20261127070313">
 <!--og-->
 <meta name="description" content="Pickup, shipping, payments and custom orders, all answered.">
 <link rel="canonical" href="https://celestenguyenn-design.github.io/Crochet/faq.html">
@@ -28,8 +28,8 @@
 <main class="container article"><h1>Frequently Asked Questions</h1><div id="faq"><p class="muted">Loading…</p></div>
 <div class="notice center" style="margin-top:28px"><p>Still have a question?</p><a class="btn" href="custom.html">Send me a message</a></div></main>
 <script type="module">
-import { sb, getSettings, renderChrome } from "./assets/common.js?v=20261127065118";
-import { faqList } from "./assets/sections.js?v=20261127065118";
+import { sb, getSettings, renderChrome } from "./assets/common.js?v=20261127070313";
+import { faqList } from "./assets/sections.js?v=20261127070313";
 renderChrome(await getSettings(), "");
 const { data } = await sb.from("faqs").select("*").order("sort_order");
 document.getElementById("faq").innerHTML = data?.length ? faqList(data) : `<p class="muted">No questions yet.</p>`;

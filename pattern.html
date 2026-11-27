@@ -6,15 +6,32 @@
 <title>Pattern</title>
 <link rel="icon" href="assets/icon/favicon-32.png" sizes="32x32">
 <link rel="apple-touch-icon" href="assets/icon/apple-touch.png">
-<link rel="stylesheet" href="assets/style.css?v=20261127065118">
+<link rel="stylesheet" href="assets/style.css?v=20261127070313">
 </head>
 <body>
 <header id="site-header"></header>
 <main class="container"><article id="article" class="article" data-site=""><p class="muted">Loading…</p></article></main>
 <script type="module">
-import { sb, getSettings, renderChrome, esc, safeUrl, wireSignup } from "./assets/common.js?v=20261127065118";
-import { signupForm } from "./assets/sections.js?v=20261127065118";
-import { marked, DOMPurify } from "./assets/vendor/markdown.js?v=20261127065118";
+import { sb, getSettings, renderChrome, esc, safeUrl, wireSignup } from "./assets/common.js?v=20261127070313";
+import { signupForm } from "./assets/sections.js?v=20261127070313";
+import { marked, DOMPurify } from "./assets/vendor/markdown.js?v=20261127070313";
+// "Supplies I use": each line is "Label | search words" or "Label | https://amazon link".
+// Your Amazon Associates ID (Settings) is added so you earn from purchases.
+function supplyBox(text, tag) {
+  const lines = String(text || "").split("\n").map((l) => l.split("|").map((x) => x.trim())).filter(([l]) => l);
+  if (!lines.length) return "";
+  const t = /^[A-Za-z0-9_-]{1,40}$/.test(tag || "") ? tag : "";
+  const link = (l, q) => {
+    let u;
+    if (/^https:\/\/(www\.)?(amazon\.com|amzn\.to)\//.test(q || "")) u = new URL(q);
+    else { u = new URL("https://www.amazon.com/s"); u.searchParams.set("k", q || l); }
+    if (t && u.hostname.endsWith("amazon.com")) u.searchParams.set("tag", t);
+    return u.href;
+  };
+  return `<div class="supplies no-print"><b>🛒 Supplies I use</b>
+    <div class="supply-links">${lines.map(([l, q]) => `<a class="btn small secondary" href="${esc(link(l, q))}" target="_blank" rel="noopener sponsored">${esc(l)}</a>`).join("")}</div>
+    ${t ? `<p class="muted" style="font-size:.8rem;margin:6px 0 0">As an Amazon Associate I earn from qualifying purchases. It doesn't cost you anything extra and helps keep my patterns free 💕</p>` : ""}</div>`;
+}
 const s = await getSettings();
 const slug = new URLSearchParams(location.search).get("p");
 const { data: p } = await sb.from("patterns").select("*").eq("slug", slug).maybeSingle();
@@ -42,6 +59,7 @@ else {
     </div>
     <div class="ad-slot"></div>
     ${p.materials ? `<div class="materials"><b>Materials</b>\n${esc(p.materials)}</div>` : ""}
+    ${supplyBox(p.supplies, s.amazon_tag)}
     <div class="content">${body}</div>
     <div class="ad-slot"></div>
     <div class="card signup center no-print"><h2>Want more free patterns?</h2><p>Get an email when I post a new one.</p>${signupForm("Sign me up", "pattern")}</div>
@@ -52,7 +70,7 @@ else {
   document.getElementById("print-btn").onclick = () => window.print();
   document.getElementById("share-btn").onclick = async () => {
     if (navigator.share) { try { await navigator.share({ title: p.title, url: location.href }); } catch {} }
-    else { await navigator.clipboard.writeText(location.href); const { toast } = await import("./assets/common.js?v=20261127065118"); toast("Link copied!"); }
+    else { await navigator.clipboard.writeText(location.href); const { toast } = await import("./assets/common.js?v=20261127070313"); toast("Link copied!"); }
   };
 }
 </script>
