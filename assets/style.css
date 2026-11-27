@@ -806,3 +806,4 @@ main.container { padding-top: 44px; padding-bottom: 64px; }
 @media (prefers-reduced-motion: reduce) { .about-photo .deco { animation: none; } }
 .about-photo { width: min(380px, 82vw); }
 .about-photo img { aspect-ratio: auto; height: auto; border-radius: 28px; }
+.about-hi { text-align: center; font-size: 1.35rem; font-weight: 700; color: var(--primary); margin: 6px 0 4px; }
