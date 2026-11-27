@@ -6,7 +6,7 @@
 <title>Cart</title>
 <link rel="icon" href="assets/icon/favicon-32.png" sizes="32x32">
 <link rel="apple-touch-icon" href="assets/icon/apple-touch.png">
-<link rel="stylesheet" href="assets/style.css?v=20261127160646">
+<link rel="stylesheet" href="assets/style.css?v=20261127161849">
 </head>
 <body>
 <header id="site-header"></header>
@@ -35,6 +35,7 @@
           </div>
         </div>
 
+        <div id="plan-box" hidden><label>How much would you like to pay now?</label><div id="plan-options"></div></div>
         <label id="pay-label">How will you pay?</label>
         <div id="pay-options"></div>
 
@@ -53,8 +54,8 @@
   <div id="done-view" class="article" style="display:none"></div>
 </main>
 <script type="module">
-import { sb, getSettings, renderChrome, esc, money, safeUrl, cart } from "./assets/common.js?v=20261127160646";
-import { SUPABASE_URL, SUPABASE_KEY } from "./assets/config.js?v=20261127160646";
+import { sb, getSettings, renderChrome, esc, money, safeUrl, cart } from "./assets/common.js?v=20261127161849";
+import { SUPABASE_URL, SUPABASE_KEY } from "./assets/config.js?v=20261127161849";
 const s = await getSettings();
 renderChrome(s, "cart");
 const $ = (id) => document.getElementById(id);
@@ -78,7 +79,7 @@ function paintPay() {
   if (s.paypal_email) opts.push(["paypal", "PayPal", `To <b>${esc(s.paypal_email)}</b>`]);
   if (s.card_enabled) {
     const fee = Number(s.card_fee_percent || 0), fixed = Number(s.card_fee_fixed_cents || 0);
-    opts.push(["card", "Card", `Visa, Mastercard, Apple Pay & more · paid instantly${fee || fixed ? ` · adds a ${[fee ? fee + "%" : "", fixed ? money(fixed) : ""].filter(Boolean).join(" + ")} card fee` : ""}`]);
+    opts.push(["card", `Card <span class="stripe-badge">🔒 Secure checkout by <b>stripe</b></span>`, `Visa, Mastercard, Apple Pay & more · paid instantly${fee || fixed ? ` · adds a ${[fee ? fee + "%" : "", fixed ? money(fixed) : ""].filter(Boolean).join(" + ")} card fee` : ""}`]);
   }
   if (!depositPct && s.allow_pay_at_pickup && fulfill() === "pickup") opts.push(["pickup", "Pay at pickup", "Cash or app when you pick up"]);
   const cur = document.querySelector("[name=pay]:checked")?.value;
@@ -86,7 +87,7 @@ function paintPay() {
     ? opts.map(([v, l, d], i) => `<label class="pay-option"><input type="radio" name="pay" value="${v}" ${(cur ? cur === v : i === 0) ? "checked" : ""} required><span><b>${l}</b><br><span class="muted">${d}</span></span></label>`).join("")
     : `<p class="error">Payment options haven't been set up yet.</p>`;
   if (!document.querySelector("[name=pay]:checked")) document.querySelector("[name=pay]")?.click();
-  $("pay-label").textContent = allDigital() ? "How will you pay?" : depositPct ? `How will you pay your ${depositPct === 100 ? "payment" : depositPct + "% deposit"}?` : "How will you pay?";
+  $("pay-label").textContent = allDigital() || !depositPct ? "How will you pay?" : depositPct === 100 || payFull() ? "How will you pay?" : `How will you pay your ${depositPct}% deposit?`;
 }
 function onFulfill() {
   const dig = allDigital();
@@ -98,6 +99,19 @@ function onFulfill() {
   paintPay(); render();
 }
 $("fulfill-options").addEventListener("change", onFulfill);
+
+// ----- Pay the deposit now, or the whole thing -----
+const payFull = () => document.querySelector("[name=plan]:checked")?.value === "full";
+function paintPlan() {
+  const show = depositPct > 0 && depositPct < 100 && !allDigital();
+  $("plan-box").hidden = !show;
+  if (!show) return;
+  if (!$("plan-options").innerHTML) {
+    $("plan-options").innerHTML = [["deposit", `Pay the ${depositPct}% deposit`, "Pay the rest later, before pickup or shipping"], ["full", "Pay in full now", "All done, nothing left to pay later"]]
+      .map(([v, l, d], i) => `<label class="pay-option"><input type="radio" name="plan" value="${v}" ${i === 0 ? "checked" : ""}><span><b>${l}</b><br><span class="muted">${d}</span></span></label>`).join("");
+    $("plan-options").addEventListener("change", () => { render(); paintPay(); });
+  }
+}
 
 // ----- Deposit agreement -----
 if (depositPct > 0) {
@@ -135,17 +149,18 @@ function render() {
   const sub = items.reduce((t, i) => t + i.price_cents * i.quantity, 0), off = discountFor(sub);
   const ship = fulfill() === "shipping" ? shipFee(sub - off) : 0, total = sub - off + ship;
   const dig = allDigital();
-  const dep = dig ? total : Math.ceil(total * depositPct / 100);
+  paintPlan();
+  const dep = dig || payFull() ? total : Math.ceil(total * depositPct / 100);
   $("summary").style.display = "";
   $("summary").innerHTML = line("Subtotal", money(sub))
     + (off ? line(`Discount (${esc(discount.code)})`, "−" + money(off), "good") : "")
     + (fulfill() === "shipping" ? line("Shipping", ship ? money(ship) : "Free") : "")
     + line("Total", money(total), "big")
-    + (!dig && depositPct > 0 && depositPct < 100 ? `<div class="deposit-box">${line(`Due now (${depositPct}% deposit)`, money(dep), "big")}${line(fulfill() === "shipping" ? "Rest, due before shipping" : "Rest, due at pickup", money(total - dep))}</div>` : "")
+    + (!dig && !payFull() && depositPct > 0 && depositPct < 100 ? `<div class="deposit-box">${line(`Due now (${depositPct}% deposit)`, money(dep), "big")}${line(fulfill() === "shipping" ? "Rest, due before shipping" : "Rest, due at pickup", money(total - dep))}</div>` : "")
     + `<p class="muted" style="margin:8px 0 0; font-size:.85rem">No sales tax.</p>`;
   $("agree-box").hidden = !(depositPct > 0 || dig); $("agree").required = depositPct > 0 || dig;
   if (dig) $("agree-text").innerHTML = `I understand this is a <b>digital PDF pattern</b>, not a finished item, and my download unlocks once my <b>${money(total)}</b> payment is confirmed.`;
-  else if (depositPct > 0) $("agree-text").innerHTML = depositPct < 100
+  else if (depositPct > 0) $("agree-text").innerHTML = depositPct < 100 && !payFull()
     ? `I understand my order <b>isn't confirmed or started</b> until my <b>${money(dep)} deposit</b> is received.`
     : `I understand my order <b>isn't confirmed or started</b> until my payment is received.`;
   if (discount && !off && discount.min_subtotal_cents) $("code-msg").textContent = `Add ${money(discount.min_subtotal_cents - sub)} more to use ${discount.code}.`;
@@ -173,6 +188,7 @@ $("form").addEventListener("submit", async (e) => {
     p_items: cart.get().map((i) => ({ product_id: i.product_id, quantity: i.quantity, options: i.options || {} })),
     p_discount_code: discount?.code || null,
     p_fulfillment: fulfill(),
+    p_pay_full: payFull(),
     p_address: ship ? { name: f.get("name"), line1: f.get("line1"), line2: f.get("line2"), city: f.get("city"), state: f.get("state"), zip: f.get("zip") } : null,
   });
   if (error) { err.textContent = error.message; btn.disabled = false; return; }
