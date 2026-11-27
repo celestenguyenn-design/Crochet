@@ -1,6 +1,13 @@
 import { createClient } from "./vendor/supabase.js";
 import { SUPABASE_URL, SUPABASE_KEY } from "./config.js";
 
+// Some phones can't open animated WebP files (for example iPhones in Lockdown Mode).
+// If an animation fails to load, swap in the animated-PNG copy instead.
+addEventListener("error", (e) => {
+  const t = e.target;
+  if (t instanceof HTMLImageElement && t.dataset.fb && !t.src.endsWith(t.dataset.fb.split("/").pop())) t.src = t.dataset.fb;
+}, true);
+
 export const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 export const FONTS = {
@@ -107,7 +114,7 @@ export function renderChrome(s, active, pages = null) {
   const footer = document.getElementById("site-footer");
   const paint = (pg) => {
     const links = [`<a href="order.html">Order status</a>`, `<a href="faq.html">FAQ</a>`, ...(pg || []).map((p) => `<a href="page.html?p=${encodeURIComponent(p.slug)}">${esc(p.title)}</a>`)].join(" · ");
-    footer.innerHTML = `<img class="footer-mascot" src="${new URL("art/mascot-anim.webp", import.meta.url).href}" alt="" aria-hidden="true">
+    footer.innerHTML = `<img class="footer-mascot" src="${new URL("art/mascot-anim.webp", import.meta.url).href}" data-fb="${new URL("art/apng/mascot-anim.png", import.meta.url).href}" alt="" aria-hidden="true">
       <div class="footer-tag">made with love, one stitch at a time ♡</div>
       <div class="container footer-inner">
       <div>© ${new Date().getFullYear()} ${esc(s.shop_name)}</div>
