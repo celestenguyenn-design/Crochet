@@ -64,8 +64,11 @@ Deno.serve(async (req) => {
     const out = [];
     for (const f of files || []) {
       let path = f.file_path;
-      try { path = await stamped(f.file_path, order_number, email); } catch (e) { console.error("stamp failed", f.file_path, e); }
-      const { data } = await db.storage.from(BUCKET).createSignedUrl(path, 60 * 60, { download: `${f.name.replace(/[^\w\- ()]/g, "")}.pdf` });
+      if (!/\.zip$/i.test(f.file_path)) { // zip packs (e.g. sticker sets) are sent as-is, not stamped
+        try { path = await stamped(f.file_path, order_number, email); } catch (e) { console.error("stamp failed", f.file_path, e); }
+      }
+      const ext = /\.zip$/i.test(f.file_path) ? "zip" : "pdf";
+      const { data } = await db.storage.from(BUCKET).createSignedUrl(path, 60 * 60, { download: `${f.name.replace(/[^\w\- ()]/g, "")}.${ext}` });
       if (data?.signedUrl) out.push({ name: f.name, url: data.signedUrl });
     }
     return Response.json({ downloads: out }, { headers: cors });

@@ -6,15 +6,15 @@
 <title></title>
 <link rel="icon" href="assets/icon/favicon-32.png" sizes="32x32">
 <link rel="apple-touch-icon" href="assets/icon/apple-touch.png">
-<link rel="stylesheet" href="assets/style.css?v=20261127071247">
+<link rel="stylesheet" href="assets/style.css?v=20261127071604">
 </head>
 <body>
 <header id="site-header"></header>
 <main class="container" id="cat-page"><p class="muted">Loading…</p></main>
 <footer id="site-footer"></footer>
 <script type="module">
-import { sb, getSettings, renderChrome, esc, safeUrl, cart, toast, startCountdowns } from "./assets/common.js?v=20261127071247";
-import { productCard, wireCarousels, md } from "./assets/sections.js?v=20261127071247";
+import { sb, getSettings, renderChrome, esc, safeUrl, cart, toast, startCountdowns } from "./assets/common.js?v=20261127071604";
+import { productCard, wireCarousels, md } from "./assets/sections.js?v=20261127071604";
 const s = await getSettings();
 const slug = new URLSearchParams(location.search).get("c");
 const { data: c } = await sb.from("categories").select("*").eq("slug", slug).maybeSingle();
@@ -27,7 +27,8 @@ else {
   el.innerHTML = `<section class="cat-hero ${safeUrl(c.image_url) ? "has-img" : ""}">
       ${safeUrl(c.image_url) ? `<img src="${esc(c.image_url)}" alt="">` : ""}
       <div><h1>${c.emoji ? esc(c.emoji) + " " : ""}${esc(c.name)}</h1>${c.description ? `<p>${esc(c.description)}</p>` : ""}
-      <a class="btn secondary small" href="custom.html?kind=${encodeURIComponent(c.name)}">Request a custom ${esc(c.name.toLowerCase())} piece</a></div>
+      ${/pattern/i.test(c.name) ? `<a class="btn secondary small" href="custom.html?kind=Crochet">Request a custom crochet</a>`
+        : `<a class="btn secondary small" href="custom.html?kind=${encodeURIComponent(c.name)}">Request a custom ${esc(c.name.toLowerCase())} piece</a>`}</div>
     </section>
     ${isFlowers ? `<div class="notice combo"><b>💐 + 🧶 Want a crochet friend in your bouquet?</b><br>I can tuck a little crochet piece into any bouquet.
       <a href="custom.html?kind=${encodeURIComponent("Bouquet with a crochet piece")}">Request a bouquet combo →</a></div>` : ""}
