@@ -21,5 +21,13 @@
     "still": "999ffee4-32b2-4892-a4a4-dbe18e1c1f16",
     "animation": "62c01bcb-5e72-46aa-9455-6d33d1faba7c",
     "sha12": "b03c131c1dfc"
+  },
+  "mascot-girl-v1": {
+    "still": "a10b31c5-bf19-4503-9320-a9bfe046f54c",
+    "sha12": "ad400dd1fea6"
+  },
+  "mascot-girl-v2": {
+    "still": "ca61b682-50e7-4875-ac30-98033af6bf8e",
+    "sha12": "f2500057d5fc"
   }
 }
