@@ -1,0 +1,25 @@
+{
+  "mascot-bunny": {
+    "still": "1cd83956-0584-408b-88d3-d61ae3dbc735",
+    "animation": "14174171-3092-49c1-9cfb-8bd2f2e9b462",
+    "sha12": "fe12bc5aa27e"
+  },
+  "mascot-bunny-heart-eyes (alt)": {
+    "still": "2602e3bc-fe30-410f-9684-7f71f1bfd41a"
+  },
+  "cat-crochet": {
+    "still": "2950f38d-7fe8-4a63-83d7-ee93d6508a92",
+    "animation": "8524e1cc-ad5f-4023-8bc3-421cef083dd9",
+    "sha12": "45e792067b53"
+  },
+  "flower-gift": {
+    "still": "72550081-3858-4863-9866-6ca7d6cf5a04",
+    "animation": "a7957b78-2141-476e-a4ec-dac2b45ca0f4",
+    "sha12": "3cf3627c152a"
+  },
+  "clay-baker": {
+    "still": "999ffee4-32b2-4892-a4a4-dbe18e1c1f16",
+    "animation": "62c01bcb-5e72-46aa-9455-6d33d1faba7c",
+    "sha12": "b03c131c1dfc"
+  }
+}

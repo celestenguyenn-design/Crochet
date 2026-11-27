@@ -32,6 +32,15 @@ export const SECTION_TYPES = {
       { key: "button2_link", label: "Button 2 link", type: "text", default: "custom.html" },
     ],
   },
+  scenes: {
+    label: "Animated scenes", icon: "🎀", desc: "Your 3 animated characters (crochet kitty, flower gift, clay baker) linking to each shop",
+    fields: [
+      { key: "title", label: "Title", type: "text", default: "What I make" },
+      { key: "cap1", label: "Kitty caption (Crochet)", type: "text", default: "Crochet plushies" },
+      { key: "cap2", label: "Flower gift caption (Flowers)", type: "text", default: "Forever flowers" },
+      { key: "cap3", label: "Baker caption (Clay)", type: "text", default: "Clay charms" },
+    ],
+  },
   perks: {
     label: "Perks row", icon: "🚚", desc: "Little icons that build trust: shipping, handmade, payments…",
     fields: [
@@ -219,7 +228,7 @@ export const RENDER = {
     if (!img) return d.preview ? `<section class="banner-img ph" style="aspect-ratio:4/1; display:grid; place-items:center"><p class="muted">(Upload your banner picture)</p></section>` : "";
     const btn = (l, h, cls) => (l && linkOk(h) ? `<a class="btn ${cls}" href="${esc(h)}">${esc(l)}</a>` : "");
     const btns = btn(s.button1_label, s.button1_link, "") + " " + btn(s.button2_label, s.button2_link, "secondary");
-    return `<section><img class="banner-img" src="${esc(img)}" alt="${esc(s.alt)}">${btns.trim() ? `<div class="hero-btns banner-btns">${btns}</div>` : ""}</section>`;
+    return `<section><div class="banner-wrap"><img class="banner-img" src="${esc(img)}" alt="${esc(s.alt)}"></div>${btns.trim() ? `<div class="hero-btns banner-btns">${btns}</div>` : ""}</section>`;
   },
   products(s, d) {
     let list = d.products;
@@ -263,6 +272,14 @@ export const RENDER = {
     if (!vids.length) return d.preview ? `<section>${head(s.title)}<p class="muted">(Paste an Instagram reel link or upload a video.)</p></section>` : "";
     return `<section>${head(s.title)}${s.body ? `<p class="center" style="max-width:640px;margin:0 auto 18px">${esc(s.body)}</p>` : ""}
       <div class="vids vids-${vids.length}">${vids.join("")}</div></section>`;
+  },
+  scenes(s) {
+    const art = (f) => new URL(`art/${f}.webp`, import.meta.url).href;
+    const card = (f, cap, href, sub) => `<a class="scene" href="${href}"><img src="${art(f)}" alt="" loading="lazy"><b>${esc(cap)}</b><span>${sub} →</span></a>`;
+    return `<section class="scenes-section">${head(s.title)}<div class="scenes">
+      ${card("cat-crochet", s.cap1, "category.html?c=crochet", "Shop crochet")}
+      ${card("flower-gift", s.cap2, "category.html?c=flowers", "Shop flowers")}
+      ${card("clay-baker", s.cap3, "category.html?c=clay", "Shop clay")}</div></section>`;
   },
   perks(s) {
     const items = String(s.items || "").split("\n").map((l) => l.trim()).filter(Boolean).slice(0, 6);

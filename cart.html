@@ -120,7 +120,7 @@ const line = (l, v, cls = "") => `<div class="sum-line ${cls}"><span>${l}</span>
 function render() {
   const items = cart.get();
   if (!items.length) {
-    $("items").innerHTML = `<p>Your cart is empty. <a href="index.html">Go shopping →</a></p>`;
+    $("items").innerHTML = `<div class="card center empty-cart"><img src="assets/icon/mascot.svg" alt="" width="120" height="120"><p>Your cart is empty!</p><a class="btn" href="index.html#shop">Go shopping</a></div>`;
     $("summary").style.display = "none"; $("submit").disabled = true; return;
   }
   $("items").innerHTML = items.map((i, idx) => `<div class="cart-item">
