@@ -57,12 +57,12 @@ Deno.serve(async (req) => {
         ${tr("Total", money(o.total_cents), true)}
         ${o.deposit_cents && rest > 0 ? tr(`Deposit due now`, money(o.deposit_cents)) + tr(ship ? "Rest, before shipping" : "Rest, at pickup", money(rest)) : ""}</table>`;
       const a = o.ship_address;
-      const addr = ship && a ? `<p><b>📦 Ship to:</b><br>${[a.name, a.line1, a.line2, `${a.city}, ${a.state} ${a.zip}`].filter(Boolean).map(esc).join("<br>")}</p>` : o.fulfillment === "digital" ? `<p><b>📄 Digital pattern</b> — mark the order <b>Paid in full</b> to unlock their download.</p>` : `<p><b>📍 Local pickup</b></p>`;
+      const addr = ship && a ? `<p><b>📦 Ship to:</b><br>${[a.name, a.line1, a.line2, `${a.city}, ${a.state} ${a.zip}`].filter(Boolean).map(esc).join("<br>")}</p>` : o.fulfillment === "digital" ? `<p><b>📄 Digital pattern.</b> Mark the order <b>Paid in full</b> to unlock their download.</p>` : `<p><b>📍 Local pickup</b></p>`;
 
-      await send(OWNER_EMAIL, `🧶 New order #${o.order_number} – ${money(o.total_cents)}${ship ? " (ship)" : o.fulfillment === "digital" ? " (pattern)" : " (pickup)"}`, wrap(s, `
+      await send(OWNER_EMAIL, `🧶 New order #${o.order_number} · ${money(o.total_cents)}${ship ? " (ship)" : o.fulfillment === "digital" ? " (pattern)" : " (pickup)"}`, wrap(s, `
         <p><b>${esc(o.customer_name)}</b> placed order <b>#${o.order_number}</b>.</p>
         ${moneyTable}
-        <p style="background:#fde0e0;color:#a32020;padding:8px 12px;border-radius:10px;font-weight:bold">Nothing paid yet — ${o.deposit_cents && rest > 0 ? `waiting for ${money(o.deposit_cents)} deposit` : `waiting for ${money(o.total_cents)}`} by ${pm}</p>
+        <p style="background:#fde0e0;color:#a32020;padding:8px 12px;border-radius:10px;font-weight:bold">Nothing paid yet. ${o.deposit_cents && rest > 0 ? `Waiting for ${money(o.deposit_cents)} deposit` : `Waiting for ${money(o.total_cents)}`} by ${pm}</p>
         ${addr}
         <p>Email: ${esc(o.email)}${o.phone ? `<br>Phone: ${esc(o.phone)}` : ""}</p>
         ${o.customer_notes ? `<p><i>Note:</i> ${esc(o.customer_notes)}</p>` : ""}`), o.email);
@@ -89,13 +89,13 @@ Deno.serve(async (req) => {
       const { data: r } = await db.from("custom_requests").update({ notified_at: new Date().toISOString() })
         .eq("id", id).is("notified_at", null).select("*").maybeSingle();
       if (!r) return Response.json({ skipped: "already notified" });
-      await send(OWNER_EMAIL, `✨ New custom request from ${r.name}${r.kind ? " – " + r.kind : ""}`, wrap(s, `
+      await send(OWNER_EMAIL, `✨ New custom request from ${r.name}${r.kind ? " · " + r.kind : ""}`, wrap(s, `
         <p><b>${esc(r.name)}</b> (${esc(r.email)}${r.phone ? ", " + esc(r.phone) : ""}) wants${r.kind ? ` a <b>${esc(r.kind)}</b> piece` : ""}:</p>
         <p style="white-space:pre-wrap">${esc(r.description)}</p>
         <p>${[r.colors && "Colors: " + esc(r.colors), r.size && "Size: " + esc(r.size), r.budget && "Budget: " + esc(r.budget), r.needed_by && "Needed by: " + esc(r.needed_by)].filter(Boolean).join("<br>")}</p>
-        ${(r.photo_paths || []).length ? `<p>📷 ${r.photo_paths.length} photo${r.photo_paths.length > 1 ? "s" : ""} attached — see the Custom Requests tab in your dashboard.</p>` : ""}`), r.email);
+        ${(r.photo_paths || []).length ? `<p>📷 ${r.photo_paths.length} photo${r.photo_paths.length > 1 ? "s" : ""} attached. See the Custom Requests tab in your dashboard.</p>` : ""}`), r.email);
       if (FROM_EMAIL) {
-        await send(r.email, `We got your custom request! – ${s.shop_name}`, wrap(s, `
+        await send(r.email, `We got your custom request! 💕 ${s.shop_name}`, wrap(s, `
           <p>Hi ${esc(r.name)}, thanks for your custom request! 💕 I'll get back to you soon with a quote.</p>
           <p style="white-space:pre-wrap"><i>${esc(r.description)}</i></p>`), OWNER_EMAIL);
       }
@@ -105,7 +105,7 @@ Deno.serve(async (req) => {
       const { data: m } = await db.from("contact_messages").update({ notified_at: new Date().toISOString() })
         .eq("id", id).is("notified_at", null).select("*").maybeSingle();
       if (!m) return Response.json({ skipped: "already notified" });
-      await send(OWNER_EMAIL, `💌 ${m.subject || "New message"} – from ${m.name}`, wrap(s, `
+      await send(OWNER_EMAIL, `💌 ${m.subject || "New message"} from ${m.name}`, wrap(s, `
         <p><b>${esc(m.name)}</b> (${esc(m.email)}) sent a message from your Contact page:</p>
         <p><b>${esc(m.subject)}</b></p>
         <p style="white-space:pre-wrap">${esc(m.message)}</p>
