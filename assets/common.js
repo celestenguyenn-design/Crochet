@@ -106,6 +106,13 @@ export function renderChrome(s, active, pages = null) {
       </nav>
     </div>`;
   const btn = document.getElementById("menu-btn"), nav = document.getElementById("main-nav");
+  // When you scroll down, the sticky header shrinks so it doesn't cover the page.
+  if (!window.__compactWired) {
+    window.__compactWired = true;
+    const hdr = document.getElementById("site-header");
+    const onScroll = () => { if (scrollY > 60) hdr.classList.add("compact"); else if (scrollY < 8) hdr.classList.remove("compact"); };
+    addEventListener("scroll", onScroll, { passive: true }); onScroll();
+  }
   // On phones, tapping "Shop ▾" or "Info ▾" opens its list instead of leaving the page.
   nav.querySelectorAll(".nav-drop > a").forEach((a) => a.addEventListener("click", (e) => {
     if (!matchMedia("(max-width: 640px)").matches) return;

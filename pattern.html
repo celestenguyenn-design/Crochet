@@ -46,7 +46,7 @@ else {
     <div class="ad-slot"></div>
     <div class="card signup center no-print"><h2>Want more free patterns?</h2><p>Get an email when I post a new one.</p>${signupForm("Sign me up", "pattern")}</div>
     <div class="notice center no-print" style="margin-top:20px"><p>Don't want to make it yourself?</p><a class="btn" href="custom.html">Request a custom piece</a> <a class="btn secondary" href="index.html">Visit the shop</a></div>`;
-  el.dataset.site = `${s.shop_name} — ${location.href}`;
+  el.dataset.site = `${s.shop_name} · ${location.href}`;
   renderChrome(s, "patterns");
   wireSignup(el);
   document.getElementById("print-btn").onclick = () => window.print();

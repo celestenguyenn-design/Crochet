@@ -48,7 +48,7 @@ document.getElementById("form").addEventListener("submit", async (e) => {
   const paid = o.payment_status === "paid" ? "✅ Paid in full" : o.payment_status === "refunded" ? "Refunded"
     : o.payment_status === "deposit_paid" ? `✅ Deposit received · ${money(owed)} left to pay`
     : o.payment_method === "pickup" ? "You'll pay at pickup"
-    : o.deposit_cents && o.deposit_cents < o.total_cents ? `⏳ Waiting for your ${money(o.deposit_cents)} deposit by ${app} — your order starts once it's received`
+    : o.deposit_cents && o.deposit_cents < o.total_cents ? `⏳ Waiting for your ${money(o.deposit_cents)} deposit by ${app}. Your order starts once it's received`
     : `⏳ Waiting for your ${app} payment`;
   out.innerHTML = `<div class="card"><h2>Order #${o.order_number}</h2>${steps}
     <ul>${o.items.map((i) => `<li>${i.quantity} × ${esc(i.name)}</li>`).join("")}</ul>
@@ -57,7 +57,9 @@ document.getElementById("form").addEventListener("submit", async (e) => {
     ${o.status === "shipped" && o.tracking_number ? `<p class="notice"><b>Tracking:</b> <a href="https://tools.usps.com/go/TrackConfirmAction?tLabels=${encodeURIComponent(o.tracking_number)}" target="_blank" rel="noopener">${esc(o.tracking_number)}</a></p>` : ""}
     ${o.status === "ready" && o.fulfillment !== "shipping" ? `<p class="notice"><b>Pickup:</b> ${esc(s.pickup_location)}${s.pickup_instructions ? `<br>${esc(s.pickup_instructions)}` : ""}</p>` : ""}
     ${o.has_digital ? `<div class="digital-box" id="downloads">${o.payment_status === "paid" ? "Getting your download…" : "📄 <b>Your pattern download unlocks here</b> as soon as your payment is confirmed. Check back soon!"}</div>` : ""}
-    <p class="muted">Ordered ${new Date(o.created_at).toLocaleDateString(undefined, { dateStyle: "medium" })}</p></div>`;
+    <p class="muted">Ordered ${new Date(o.created_at).toLocaleDateString(undefined, { dateStyle: "medium" })}</p></div>
+    <div id="review-box"></div>`;
+  reviewForm(o, f.get("email").trim());
   if (o.has_digital && o.payment_status === "paid") {
     const box = document.getElementById("downloads");
     try {
@@ -66,11 +68,36 @@ document.getElementById("form").addEventListener("submit", async (e) => {
       const { downloads = [] } = await res.json();
       box.innerHTML = downloads.length
         ? `<b>📄 Your patterns are ready!</b><div class="dl-list">${downloads.map((d) => `<a class="btn" href="${esc(d.url)}" target="_blank" rel="noopener"><span>${esc(d.name)}</span><span>⬇ Download</span></a>`).join("")}</div>
-           <p class="muted" style="font-size:.85rem;margin:0">Links work for 1 hour — come back to this page anytime for fresh ones.</p>`
-        : `📄 Your payment is confirmed! I'm getting your pattern file ready — check back soon, or message me if it's been a while.`;
-    } catch { box.textContent = "Couldn't load your download right now — please try again in a minute."; }
+           <p class="muted" style="font-size:.85rem;margin:0">Links work for 1 hour. Come back to this page anytime for fresh ones.</p>`
+        : `📄 Your payment is confirmed! I'm getting your pattern file ready, so check back soon, or message me if it's been a while.`;
+    } catch { box.textContent = "Couldn't load your download right now. Please try again in a minute."; }
   }
 });
+
+// Once an order is paid, the customer can leave one review. It shows on the site after I approve it.
+async function reviewForm(o, email) {
+  const box = document.getElementById("review-box");
+  if (o.status === "cancelled" || o.payment_status !== "paid") return;
+  const { data: done } = await sb.rpc("order_reviewed", { p_order_number: o.order_number, p_email: email });
+  if (done) { box.innerHTML = `<div class="card center"><p>💕 Thank you for your review!</p></div>`; return; }
+  box.innerHTML = `<form class="card review-form" id="rv"><h2>How did you like it?</h2>
+    <p class="muted">Leave a little review! It helps my small shop so much 🧶</p>
+    <div class="stars" role="radiogroup" aria-label="Rating">${[1, 2, 3, 4, 5].map((n) => `<button type="button" data-star="${n}" aria-label="${n} star${n > 1 ? "s" : ""}">★</button>`).join("")}</div>
+    <label>Your review</label><textarea name="body" required maxlength="1500" placeholder="What did you get, and how do you like it?"></textarea>
+    <label>Name to show (optional)</label><input name="name" maxlength="60" placeholder="${esc((o.customer_name || "").split(" ")[0])}">
+    <p class="error" id="rv-err"></p><button class="btn">Send review</button></form>`;
+  let rating = 5;
+  const paint = () => box.querySelectorAll("[data-star]").forEach((b) => b.classList.toggle("on", Number(b.dataset.star) <= rating));
+  paint();
+  box.querySelectorAll("[data-star]").forEach((b) => b.onclick = () => { rating = Number(b.dataset.star); paint(); });
+  document.getElementById("rv").onsubmit = async (e) => {
+    e.preventDefault();
+    const g = new FormData(e.target);
+    const { data, error } = await sb.rpc("submit_review", { p_order_number: o.order_number, p_email: email, p_rating: rating, p_body: g.get("body"), p_name: g.get("name") });
+    if (error || data !== "ok") { document.getElementById("rv-err").textContent = data === "already" ? "You already reviewed this order. Thank you!" : "Hmm, that didn't send. Please try again."; return; }
+    box.innerHTML = `<div class="card center"><p>💕 Thank you so much! Your review will show up on the site soon.</p></div>`;
+  };
+}
 </script>
 </body>
 </html>

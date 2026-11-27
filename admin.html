@@ -586,7 +586,8 @@ function productDialog(p) {
     const div = document.createElement("div"); div.className = "opt-edit card";
     div.innerHTML = `<div class="inline" style="margin-top:0"><div><input class="opt-name" placeholder="Option name, e.g. Size" value="${esc(o.name)}"></div>
       <button type="button" class="btn small danger">Remove</button></div>
-      <textarea class="opt-values" placeholder="Small&#10;Medium&#10;Large +5" style="min-height:90px; margin-top:8px">${esc(o.values.map((v) => v.label + (v.price_delta_cents ? ` ${v.price_delta_cents > 0 ? "+" : "-"}${Math.abs(v.price_delta_cents / 100)}` : "")).join("\n"))}</textarea>`;
+      <textarea class="opt-values" placeholder="Small&#10;Medium&#10;Large +5&#10;Pink @2   (shows photo #2 when picked)" style="min-height:90px; margin-top:8px">${esc(o.values.map((v) => v.label + (v.price_delta_cents ? ` ${v.price_delta_cents > 0 ? "+" : "-"}${Math.abs(v.price_delta_cents / 100)}` : "") + (v.photo ? ` @${v.photo}` : "")).join("\n"))}</textarea>
+      <p class="muted" style="margin:4px 0 0;font-size:.85rem">One choice per line. Add <b>+5</b> to charge $5 more. Add <b>@2</b> to switch to photo #2 when someone picks it.</p>`;
     div.querySelector(".danger").onclick = () => div.remove();
     box.appendChild(div);
   };
@@ -595,8 +596,11 @@ function productDialog(p) {
   const readOptions = () => [...box.querySelectorAll(".opt-edit")].map((div) => ({
     name: div.querySelector(".opt-name").value.trim(),
     values: div.querySelector(".opt-values").value.split("\n").map((l) => l.trim()).filter(Boolean).map((l) => {
+      const pm = l.match(/\s@(\d{1,2})$/); const photo = pm ? Number(pm[1]) : 0; if (pm) l = l.slice(0, pm.index).trim();
       const m = l.match(/^(.*?)\s*([+-])\s*\$?(\d+(?:\.\d{1,2})?)$/);
-      return m ? { label: m[1].trim(), price_delta_cents: (m[2] === "-" ? -1 : 1) * Math.round(parseFloat(m[3]) * 100) } : { label: l, price_delta_cents: 0 };
+      const v = m ? { label: m[1].trim(), price_delta_cents: (m[2] === "-" ? -1 : 1) * Math.round(parseFloat(m[3]) * 100) } : { label: l, price_delta_cents: 0 };
+      if (photo) v.photo = photo;
+      return v;
     }),
   })).filter((o) => o.name && o.values.length);
   d.returnValue = ""; d.showModal();
@@ -725,11 +729,11 @@ async function loadReviews() {
     sb.from("reviews").select("*").order("sort_order").order("created_at", { ascending: false }),
     sb.from("faqs").select("*").order("sort_order"),
   ]);
-  el.innerHTML = `<div class="card" style="margin-bottom:22px"><div class="head"><h2>💬 Reviews</h2><button class="btn small" id="new-review">+ Add review</button></div>
-    <p class="muted">Add nice things customers have said (from DMs, comments, texts). Show them with a "Reviews" section in the Homepage tab.</p>
+  el.innerHTML = `<div class="card" style="margin-bottom:22px"><div class="head"><h2>💬 Reviews</h2><button class="btn small secondary" id="new-review">+ Add one myself</button></div>
+    <p class="muted">Customers can leave a review on their order page once their order is paid. New reviews wait here, hidden, until you tap <b>Approve</b>. Approved reviews show in the "Happy Customers" section on your homepage.</p>
     <div class="list">${(reviews || []).map((r) => `<div class="card head" style="align-items:center; box-shadow:none; border:1px solid var(--line)">
-      <div><b>${esc(r.name)}</b> <span class="stars">${"★".repeat(r.rating)}</span> ${r.visible ? "" : `<span class="pill">Hidden</span>`}<br><span class="muted">${esc(r.body.slice(0, 90))}${r.body.length > 90 ? "…" : ""}</span></div>
-      <button class="btn small secondary" data-edit-review="${r.id}">Edit</button></div>`).join("") || `<p class="muted">No reviews yet.</p>`}</div></div>
+      <div><b>${esc(r.name)}</b> <span class="stars">${"★".repeat(r.rating)}</span> ${r.visible ? "" : `<span class="pill">${r.order_id ? "New, waiting for you" : "Hidden"}</span>`}${r.product_names ? `<br><small class="muted">Bought: ${esc(r.product_names)}</small>` : ""}<br><span class="muted">${esc(r.body.slice(0, 90))}${r.body.length > 90 ? "…" : ""}</span></div>
+      <div class="inline" style="margin:0">${r.visible ? "" : `<button class="btn small" data-approve-review="${r.id}">Approve</button>`}<button class="btn small secondary" data-edit-review="${r.id}">Edit</button></div></div>`).join("") || `<p class="muted">No reviews yet.</p>`}</div></div>
     <div class="card"><div class="head"><h2>❓ FAQ</h2><button class="btn small" id="new-faq">+ Add question</button></div>
     <p class="muted">Shown on the FAQ page (linked in your footer) and in the homepage "FAQ" section.</p>
     <div class="list">${(faqs || []).map((f) => `<div class="faq-edit" data-id="${f.id}">
@@ -739,6 +743,11 @@ async function loadReviews() {
       <button class="btn small" data-save>Save</button><button class="btn small danger" data-del>Delete</button></div><hr></div>`).join("") || `<p class="muted">No questions yet.</p>`}</div></div>`;
   $("new-review").onclick = () => reviewDialog({ rating: 5, visible: true, sort_order: 0 });
   el.querySelectorAll("[data-edit-review]").forEach((b) => b.onclick = () => reviewDialog(reviews.find((r) => r.id === b.dataset.editReview)));
+  el.querySelectorAll("[data-approve-review]").forEach((b) => b.onclick = async () => {
+    const { error } = await sb.from("reviews").update({ visible: true }).eq("id", b.dataset.approveReview);
+    if (error) return toast("Couldn't approve: " + error.message);
+    toast("Approved! It's on your homepage now 💕"); loadReviews();
+  });
   $("new-faq").onclick = async () => { await sb.from("faqs").insert({ question: "New question", answer: "", sort_order: (faqs?.length || 0) + 1 }); loadReviews(); };
   el.querySelectorAll(".faq-edit").forEach((row) => {
     row.querySelector("[data-save]").onclick = async () => {

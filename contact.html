@@ -60,7 +60,7 @@ document.getElementById("form").addEventListener("submit", async (e) => {
   const f = Object.fromEntries(new FormData(e.target));
   const btn = document.getElementById("submit"); btn.disabled = true;
   const { error } = await sb.from("contact_messages").insert(f);
-  if (error) { document.getElementById("err").textContent = "Something went wrong — please try again or DM me on Instagram."; btn.disabled = false; return; }
+  if (error) { document.getElementById("err").textContent = "Something went wrong. Please try again or DM me on Instagram."; btn.disabled = false; return; }
   e.target.style.display = "none"; document.getElementById("done").style.display = "";
 });
 </script>

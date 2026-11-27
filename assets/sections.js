@@ -51,7 +51,7 @@ export const SECTION_TYPES = {
     label: "Pre-orders", icon: "🧸", desc: "Your pre-order items (mark them in Products → Edit)",
     fields: [
       { key: "title", label: "Title", type: "text", default: "pre-orders! ˙⋆✮⋆˚" },
-      { key: "body", label: "Text (optional)", type: "textarea", default: "Reserve yours now — I'll make it just for you." },
+      { key: "body", label: "Text (optional)", type: "textarea", default: "Reserve yours now and I'll make it just for you." },
     ],
   },
   products: {
@@ -98,7 +98,7 @@ export const SECTION_TYPES = {
     ],
   },
   videos: {
-    label: "Videos", icon: "🎬", desc: "Show 1–2 videos — paste an Instagram reel or TikTok link, or upload a video",
+    label: "Videos", icon: "🎬", desc: "Show 1–2 videos: paste an Instagram reel or TikTok link, or upload a video",
     fields: [
       { key: "title", label: "Title", type: "text", default: "How I make them" },
       { key: "body", label: "Text (optional)", type: "textarea", default: "" },
@@ -110,7 +110,7 @@ export const SECTION_TYPES = {
     label: "Next drop", icon: "⏰", desc: "Countdown to your next product drop, with a reminder sign-up",
     fields: [
       { key: "title", label: "Title", type: "text", default: "Next drop" },
-      { key: "body", label: "Text", type: "textarea", default: "New pieces go live at the time below. Sign up so you don't miss it — they go fast!" },
+      { key: "body", label: "Text", type: "textarea", default: "New pieces go live at the time below. Sign up so you don't miss it, they go fast!" },
     ],
   },
   markets: {
@@ -319,7 +319,7 @@ export const RENDER = {
     if (!list.length) return d.preview ? `<section>${head(s.title)}<p class="muted">(Add reviews in the Reviews & FAQ tab.)</p></section>` : "";
     return `<section>${head(s.title)}<div class="reviews">${list.map((r) => `<div class="review card">
       ${safeUrl(r.photo_url) ? `<img src="${esc(r.photo_url)}" alt="" loading="lazy">` : ""}
-      <div class="stars" aria-label="${r.rating} out of 5">${stars(r.rating)}</div><p>“${esc(r.body)}”</p><b>— ${esc(r.name)}</b></div>`).join("")}</div></section>`;
+      <div class="stars" aria-label="${r.rating} out of 5">${stars(r.rating)}</div><p>“${esc(r.body)}”</p><b>♡ ${esc(r.name)}</b></div>`).join("")}</div></section>`;
   },
   faq(s, d) {
     const list = d.faqs.slice(0, Number(s.limit) || 5);

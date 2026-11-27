@@ -38,8 +38,8 @@ else {
       ${opts.map((o, i) => `<label>${esc(o.name)}</label><div class="opt-group" data-opt="${i}">
         ${o.values.map((v) => `<button type="button" class="opt" data-label="${esc(v.label)}">${esc(v.label)}${v.price_delta_cents ? ` <small>(${v.price_delta_cents > 0 ? "+" : "−"}${money(Math.abs(v.price_delta_cents))})</small>` : ""}</button>`).join("")}</div>`).join("")}
       ${locked ? `<div class="drop-box"><b>🔒 Drops ${esc(dropLabel(p.drop_at))}</b><div class="countdown big" data-countdown="${esc(p.drop_at)}"></div></div>`
-        : p.digital ? `<div class="digital-box">📄 <b>Digital file (PDF)</b> — not a physical item. Your download unlocks on your order page once your payment is confirmed.</div>`
-        : p.preorder ? `<div class="preorder-box">🧸 <b>Pre-order</b>${p.ships_by ? ` — ready ${esc(p.ships_by)}` : ""}. I'll make yours after you order${p.stock ? ` · only ${p.stock} spots left` : ""}.</div>`
+        : p.digital ? `<div class="digital-box">📄 <b>Digital file (PDF)</b>, not a physical item. Your download unlocks on your order page once your payment is confirmed.</div>`
+        : p.preorder ? `<div class="preorder-box">🧸 <b>Pre-order</b>${p.ships_by ? `, ready ${esc(p.ships_by)}` : ""}. I'll make yours after you order${p.stock ? ` · only ${p.stock} spots left` : ""}.</div>`
         : `<div class="stock" style="margin:14px 0 6px">${p.stock === null ? "Made to order" : soldOut ? "Sold out" : `${p.stock} available`}</div>`}
       ${p.digital || soldOut ? `<input id="qty" type="hidden" value="1">` : `<label style="margin-top:6px">Quantity</label>
       <div class="qty-step"><button type="button" data-step="-1" aria-label="Less">−</button><input id="qty" type="number" min="1" max="${p.stock ?? 100}" value="1" aria-label="Quantity"><button type="button" data-step="1" aria-label="More">+</button></div>`}
@@ -71,12 +71,18 @@ else {
     const b = e.target.closest(".opt"); if (!b) return;
     g.querySelectorAll(".opt").forEach((x) => x.classList.toggle("active", x === b));
     chosen[opts[g.dataset.opt].name] = b.dataset.label; update();
+    const v = opts[g.dataset.opt].values.find((x) => x.label === b.dataset.label);
+    if (v?.photo && photos[v.photo - 1]) showPhoto(v.photo - 1);
     document.getElementById("err").textContent = "";
   }));
+  function showPhoto(i) {
+    const img = document.getElementById("main-img"); if (!img || !photos[i]) return;
+    img.src = photos[i];
+    el.querySelectorAll(".thumbs button").forEach((x, j) => x.classList.toggle("active", j === i));
+  }
   el.querySelector(".thumbs")?.addEventListener("click", (e) => {
     const b = e.target.closest("button"); if (!b) return;
-    document.getElementById("main-img").src = b.dataset.src;
-    el.querySelectorAll(".thumbs button").forEach((x) => x.classList.toggle("active", x === b));
+    showPhoto([...el.querySelectorAll(".thumbs button")].indexOf(b));
   });
   el.querySelectorAll("[data-step]").forEach((b) => b.onclick = () => {
     const q = document.getElementById("qty"), max = Number(q.max) || 100;

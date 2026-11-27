@@ -699,3 +699,18 @@ body::after { content: ""; position: fixed; inset: -200px 0 0; z-index: -1; poin
 .content .pgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin: 12px 0 20px; }
 .content .pgrid img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 14px; box-shadow: 0 4px 10px color-mix(in srgb, var(--primary) 14%, transparent); }
 @media print { .content .pgrid { grid-template-columns: repeat(4, 1fr); } }
+
+/* Review form on the order page */
+.review-form { margin-top: 18px; }
+.review-form .stars { display: flex; gap: 4px; margin: 6px 0 10px; }
+.review-form .stars button { background: none; border: 0; font-size: 2rem; line-height: 1; color: #e6d6df; cursor: pointer; padding: 0 2px; }
+.review-form .stars button.on { color: #ffc24b; }
+
+/* Sticky header shrinks once you scroll, so page titles aren't hidden under it */
+#site-header .logo-img.logo-anim { transition: height .2s ease; }
+#site-header.compact .announcement { display: none; }
+#site-header.compact .header-inner .logo-img.logo-anim { height: 44px; }
+#site-header.compact .header-inner.centered .logo-text { display: none; }
+#site-header.compact .header-inner { padding-top: 4px; padding-bottom: 4px; }
+@media (max-width: 640px) { #site-header.compact .header-inner .logo-img.logo-anim { height: 40px; } #site-header.compact .header-inner.centered .logo-text { display: inline; } }
+main { min-height: calc(100vh - 100px); }

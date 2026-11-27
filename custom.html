@@ -53,7 +53,7 @@
     <label class="photo-drop" for="photos">📷 Tap to add photos</label>
     <input id="photos" type="file" accept="image/*" multiple hidden>
     <div class="photo-previews" id="previews"></div>
-    <p class="muted" style="font-size:.9rem; margin-top:14px">⏳ Custom pieces take time — I'll let you know how long yours will take when I send your quote.</p>
+    <p class="muted" style="font-size:.9rem; margin-top:14px">⏳ Custom pieces take time, and I'll let you know how long yours will take when I send your quote.</p>
     <p class="error" id="err"></p>
     <button class="btn" id="submit">Send request</button>
   </form>
@@ -99,7 +99,7 @@ async function shrink(file) {
 document.getElementById("photos")?.addEventListener("change", async (e) => {
   for (const file of [...e.target.files].slice(0, 4 - photos.length)) {
     const blob = await shrink(file);
-    if (!blob) { toast("That photo is too big — try another"); continue; }
+    if (!blob) { toast("That photo is too big, try another one"); continue; }
     photos.push({ blob, url: URL.createObjectURL(blob) });
   }
   e.target.value = ""; paint();
@@ -115,7 +115,7 @@ document.getElementById("form")?.addEventListener("submit", async (e) => {
     const ext = p.blob.type === "image/jpeg" ? "jpg" : (p.blob.type.split("/")[1] || "jpg").replace("jpeg", "jpg");
     const path = `${crypto.randomUUID()}.${ext}`;
     const { error } = await sb.storage.from("request-photos").upload(path, p.blob, { contentType: p.blob.type || "image/jpeg" });
-    if (error) { document.getElementById("err").textContent = "A photo didn't upload — try a different one, or send without it."; btn.disabled = false; btn.textContent = "Send request"; return; }
+    if (error) { document.getElementById("err").textContent = "A photo didn't upload. Try a different one, or send without it."; btn.disabled = false; btn.textContent = "Send request"; return; }
     f.photo_paths.push(path);
   }
   btn.textContent = "Sending…";

@@ -89,7 +89,7 @@ function onFulfill() {
   const ship = fulfill() === "shipping";
   $("address-box").hidden = !ship;
   ["line1", "city", "state", "zip"].forEach((n) => (document.querySelector(`[name=${n}]`).required = ship));
-  $("pickup-info").textContent = dig ? "📩 Digital download — nothing to pick up or ship. Your PDF unlocks on your order page as soon as your payment is confirmed." : ship ? "" : (s.pickup_location || "");
+  $("pickup-info").textContent = dig ? "📩 Digital download, so nothing to pick up or ship. Your PDF unlocks on your order page as soon as your payment is confirmed." : ship ? "" : (s.pickup_location || "");
   paintPay(); render();
 }
 $("fulfill-options").addEventListener("change", onFulfill);
