@@ -791,3 +791,16 @@ main.container { padding-top: 44px; padding-bottom: 64px; }
   .showcase-row > * { padding: 4px; border-radius: 14px; }
   .showcase-row img { border-radius: 10px; }
 }
+
+/* About page photo: round frame with a pink stitched ring and little craft stickers */
+.about-photo { position: relative; width: min(260px, 70vw); margin: 14px auto 26px; }
+.about-photo img { display: block; width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 50%;
+  border: 8px solid #fff; outline: 3px dashed color-mix(in srgb, var(--primary) 60%, transparent); outline-offset: 6px;
+  box-shadow: 0 0 0 14px color-mix(in srgb, var(--primary) 16%, var(--bg)), 0 14px 30px color-mix(in srgb, var(--primary) 25%, transparent); }
+.about-photo .deco { position: absolute; font-size: 2rem; filter: drop-shadow(0 3px 4px rgba(0,0,0,.12)); animation: bob 2.6s ease-in-out infinite; }
+.about-photo .d1 { left: -14px; bottom: 18px; }
+.about-photo .d2 { right: -12px; top: 10px; animation-delay: .5s; }
+.about-photo .d3 { right: 4px; bottom: -6px; animation-delay: 1s; font-size: 1.6rem; }
+.about-photo .d4 { left: 6px; top: -4px; animation-delay: 1.4s; font-size: 1.4rem; }
+@keyframes bob { 50% { transform: translateY(-5px) rotate(-4deg); } }
+@media (prefers-reduced-motion: reduce) { .about-photo .deco { animation: none; } }
