@@ -6,7 +6,7 @@
 <title>Cart</title>
 <link rel="icon" href="assets/icon/favicon-32.png" sizes="32x32">
 <link rel="apple-touch-icon" href="assets/icon/apple-touch.png">
-<link rel="stylesheet" href="assets/style.css?v=20261127161849">
+<link rel="stylesheet" href="assets/style.css?v=20261127163239">
 </head>
 <body>
 <header id="site-header"></header>
@@ -54,8 +54,8 @@
   <div id="done-view" class="article" style="display:none"></div>
 </main>
 <script type="module">
-import { sb, getSettings, renderChrome, esc, money, safeUrl, cart } from "./assets/common.js?v=20261127161849";
-import { SUPABASE_URL, SUPABASE_KEY } from "./assets/config.js?v=20261127161849";
+import { sb, getSettings, renderChrome, esc, money, safeUrl, cart } from "./assets/common.js?v=20261127163239";
+import { SUPABASE_URL, SUPABASE_KEY } from "./assets/config.js?v=20261127163239";
 const s = await getSettings();
 renderChrome(s, "cart");
 const $ = (id) => document.getElementById(id);
@@ -138,7 +138,7 @@ const line = (l, v, cls = "") => `<div class="sum-line ${cls}"><span>${l}</span>
 function render() {
   const items = cart.get();
   if (!items.length) {
-    $("items").innerHTML = `<div class="card center empty-cart"><img src="assets/art/mascot-anim.webp" data-fb="assets/art/apng/mascot-anim.png" alt="" width="150" height="212"><p>Your cart is empty!</p><a class="btn" href="index.html#shop">Go shopping</a></div>`;
+    $("items").innerHTML = `<div class="card center empty-cart"><img src="assets/art/girl-cart-anim.webp" data-fb="assets/art/apng/girl-cart-anim.png" alt="" width="150" height="219"><p>Your cart is empty!</p><a class="btn" href="index.html#shop">Go shopping</a></div>`;
     $("summary").style.display = "none"; $("submit").disabled = true; return;
   }
   $("items").innerHTML = items.map((i, idx) => `<div class="cart-item">

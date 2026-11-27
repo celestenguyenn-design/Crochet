@@ -61,5 +61,12 @@
     "animation": "426aa29f-e8d7-42ec-b4b4-00ddbf58aa4f",
     "anim_file": "girl-goodbye-anim.webp",
     "anim_sha12": "227935222171"
+  },
+  "girl-cart": {
+    "still": "66de727a-68c8-44ea-847c-d34859f0d66a",
+    "sha12": "cfff8a99c390",
+    "animation": "219b99c7-4f3f-47bc-a52b-67d490c1c903",
+    "anim_file": "girl-cart-anim.webp",
+    "anim_sha12": "156ec75d6986"
   }
 }
