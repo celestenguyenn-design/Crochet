@@ -255,7 +255,7 @@ export const RENDER = {
     if (!photos.length) return d.preview ? `<section>${head(s.title)}<p class="muted">(Upload photos in the Gallery tab.)</p></section>` : "";
     // One tidy row of polaroids that slowly slides sideways (pauses on hover, swipeable on phones).
     const fig = (g, dup) => `<figure data-full="${esc(g.image_url)}" data-caption="${esc(g.caption)}"${dup ? ' aria-hidden="true"' : ""}>
-      <img src="${esc(g.image_url)}" alt="${dup ? "" : esc(g.caption || "Crochet photo")}" loading="lazy">${g.caption ? `<figcaption>${esc(g.caption)}</figcaption>` : ""}</figure>`;
+      <img src="${esc(/^assets\/photos\/[^/]+\.jpg$/.test(g.image_url) ? g.image_url.replace("assets/photos/", "assets/photos/thumbs/") : g.image_url)}" alt="${dup ? "" : esc(g.caption || "Crochet photo")}" loading="lazy" decoding="async" width="200" height="250">${g.caption ? `<figcaption>${esc(g.caption)}</figcaption>` : ""}</figure>`;
     return `<section>${head(s.title)}<div class="gallery-strip"><div class="gallery-track" style="--n:${photos.length}">${photos.map((g) => fig(g)).join("")}${photos.map((g) => fig(g, true)).join("")}</div></div></section>`;
   },
   image_text(s) {

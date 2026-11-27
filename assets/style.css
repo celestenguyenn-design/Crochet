@@ -656,7 +656,7 @@ body::after { content: ""; position: fixed; inset: -200px 0 0; z-index: -1; poin
 
 /* Every other homepage section sits on a soft frosted panel so the page has rhythm */
 #home > .home-section:nth-child(even) > section { background: color-mix(in srgb, var(--card) 72%, transparent);
-  -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); border-radius: 36px; padding: 30px clamp(14px, 3vw, 34px);
+  border-radius: 36px; padding: 30px clamp(14px, 3vw, 34px);
   box-shadow: 0 10px 30px color-mix(in srgb, var(--primary) 12%, transparent); border: 2px solid color-mix(in srgb, var(--card) 90%, transparent); }
 
 /* Centre product rows that only have a few items (like Best Sellers) */
@@ -664,17 +664,17 @@ body::after { content: ""; position: fixed; inset: -200px 0 0; z-index: -1; poin
 @media (max-width: 640px) { .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
 /* Gallery: one tidy sliding row of polaroids instead of a big photo wall */
-.gallery-strip { overflow: hidden; margin: 0 -8px; padding: 10px 0 18px;
-  -webkit-mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent); mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent); }
-.gallery-track { display: flex; gap: 18px; width: max-content; animation: slide calc(var(--n) * 4.5s) linear infinite; }
+.gallery-strip { overflow: hidden; margin: 0 -8px; padding: 10px 0 18px; contain: paint; }
+.gallery-track { display: flex; gap: 18px; width: max-content; animation: slide calc(var(--n) * 4.5s) linear infinite;
+  will-change: transform; backface-visibility: hidden; transform: translate3d(0,0,0); }
 .gallery-strip:hover .gallery-track { animation-play-state: paused; }
 .gallery-track figure { flex: 0 0 200px; margin: 0; background: var(--card); padding: 8px 8px 14px; border-radius: var(--radius); cursor: zoom-in; position: relative;
-  box-shadow: 0 8px 20px color-mix(in srgb, var(--primary) 14%, transparent); transition: transform .2s; }
+  box-shadow: 0 4px 10px color-mix(in srgb, var(--primary) 14%, transparent); transition: transform .2s; }
 .gallery-track figure:nth-child(odd) { transform: rotate(-1.5deg); } .gallery-track figure:nth-child(even) { transform: rotate(1.2deg) translateY(6px); }
 .gallery-track figure:hover { transform: scale(1.04) rotate(0); }
 .gallery-track img { width: 100%; aspect-ratio: 4 / 5; object-fit: cover; border-radius: calc(var(--radius) - 10px); display: block; }
 .gallery-track figcaption { font-size: .85rem; text-align: center; margin-top: 6px; }
-@keyframes slide { to { transform: translateX(calc(-50% - 9px)); } }
+@keyframes slide { from { transform: translate3d(0,0,0); } to { transform: translate3d(calc(-50% - 9px),0,0); } }
 @media (max-width: 640px) { .gallery-track figure { flex-basis: 150px; } }
 @media (prefers-reduced-motion: reduce) { .gallery-track { animation: none; } .gallery-strip { overflow-x: auto; } }
 
