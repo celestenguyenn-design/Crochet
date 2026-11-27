@@ -7,7 +7,7 @@
 <title>Admin</title>
 <link rel="icon" href="assets/icon/favicon-32.png" sizes="32x32">
 <link rel="apple-touch-icon" href="assets/icon/apple-touch.png">
-<link rel="stylesheet" href="assets/style.css?v=20261127170101">
+<link rel="stylesheet" href="assets/style.css?v=20261127194353">
 <style>
   .tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 24px; }
   .tabs button { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 8px 14px; font: inherit; font-weight: 700; cursor: pointer; color: var(--text); }
@@ -137,8 +137,8 @@
 <dialog id="dlg"></dialog>
 
 <script type="module">
-import { sb, getSettings, applyTheme, esc, money, safeUrl, toast, FONTS } from "./assets/common.js?v=20261127170101";
-import { SECTION_TYPES, newSection } from "./assets/sections.js?v=20261127170101";
+import { sb, getSettings, applyTheme, esc, money, safeUrl, toast, FONTS } from "./assets/common.js?v=20261127194353";
+import { SECTION_TYPES, newSection } from "./assets/sections.js?v=20261127194353";
 
 let settings = await getSettings();
 const $ = (id) => document.getElementById(id);
@@ -686,8 +686,12 @@ window.addEventListener("message", (e) => { if (e.origin === location.origin && 
 window.addEventListener("beforeunload", (e) => { if (dirty) { e.preventDefault(); e.returnValue = ""; } });
 function markDirty(scrollTo) { dirty = true; $("hp-save").disabled = false; $("hp-status").textContent = "Unsaved changes"; sendPreview(scrollTo); }
 
+let homeBase = "";
 async function loadHomepage() {
   if (!categories.length) categories = (await sb.from("categories").select("*").order("sort_order")).data || [];
+  const { data: freshHome } = await sb.from("settings").select("home_sections").eq("id", 1).single();
+  if (freshHome?.home_sections) settings.home_sections = freshHome.home_sections;
+  homeBase = JSON.stringify(settings.home_sections || []);
   draft = {
     sections: structuredClone(settings.home_sections?.length ? settings.home_sections : ["hero", "products", "gallery", "shop", "testimonials", "faq"].map(newSection)),
     ann: { announcement_enabled: settings.announcement_enabled, announcement_text: settings.announcement_text || "", announcement_link: settings.announcement_link || "" },
@@ -716,7 +720,11 @@ async function loadHomepage() {
   const annSync = () => { draft.ann = { announcement_enabled: $("ann-on").checked, announcement_text: $("ann-text").value, announcement_link: $("ann-link").value }; markDirty(); };
   ["ann-on", "ann-text", "ann-link"].forEach((id) => $(id).addEventListener("input", annSync));
   $("hp-save").onclick = async () => {
+    const { data: now } = await sb.from("settings").select("home_sections").eq("id", 1).single();
+    if (JSON.stringify(now?.home_sections || []) !== homeBase &&
+        !confirm("Your homepage was changed somewhere else (another tab or device) since you opened this page. Save anyway and replace those changes? Tap Cancel, then reload, to keep them.")) return;
     await saveSettings({ home_sections: draft.sections, ...draft.ann });
+    homeBase = JSON.stringify(draft.sections);
     dirty = false; $("hp-save").disabled = true; $("hp-status").textContent = "All changes saved ✓";
   };
   $("hp-discard").onclick = () => { if (!dirty || confirm("Throw away your unsaved changes?")) loadHomepage(); };
@@ -1197,7 +1205,10 @@ function loadAppearance() {
     if (f.adsense_client && !/^ca-pub-\d+$/.test(f.adsense_client)) return toast("AdSense ID should look like ca-pub-1234567890");
     // Banner picture lives in the homepage sections: update it, or add it at the top (hiding the text banner)
     const bannerImg = (f.banner_image || "").trim(); delete f.banner_image;
-    let secs = structuredClone(settings.home_sections?.length ? settings.home_sections : ["hero", "products", "gallery", "shop", "testimonials", "faq"].map(newSection));
+    // Use the homepage layout as it is right now (not the copy loaded when this page opened),
+    // so saving Settings can never undo homepage changes made since then.
+    const { data: fresh } = await sb.from("settings").select("home_sections").eq("id", 1).single();
+    let secs = structuredClone(fresh?.home_sections?.length ? fresh.home_sections : ["hero", "products", "gallery", "shop", "testimonials", "faq"].map(newSection));
     const ib = secs.find((x) => x.type === "image_banner");
     if (ib) { ib.settings.image = bannerImg; ib.enabled = !!bannerImg; }
     else if (bannerImg) {

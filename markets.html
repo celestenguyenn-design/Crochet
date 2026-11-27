@@ -6,7 +6,7 @@
 <title>Markets</title>
 <link rel="icon" href="assets/icon/favicon-32.png" sizes="32x32">
 <link rel="apple-touch-icon" href="assets/icon/apple-touch.png">
-<link rel="stylesheet" href="assets/style.css?v=20261127170101">
+<link rel="stylesheet" href="assets/style.css?v=20261127194353">
 <!--og-->
 <meta name="description" content="Pickup, shipping, payments and custom orders — answered.">
 <link rel="canonical" href="https://celestenguyenn-design.github.io/Crochet/faq.html">
@@ -30,8 +30,8 @@
 <div id="events" class="events" style="grid-template-columns:1fr"><p class="muted">Loading…</p></div>
 <div class="notice center" style="margin-top:28px"><p>Can't make it? Shop online or request something custom.</p><a class="btn" href="shop.html">Shop now</a> <a class="btn secondary" href="custom.html">Custom orders</a></div></main>
 <script type="module">
-import { sb, getSettings, renderChrome } from "./assets/common.js?v=20261127170101";
-import { eventCard } from "./assets/sections.js?v=20261127170101";
+import { sb, getSettings, renderChrome } from "./assets/common.js?v=20261127194353";
+import { eventCard } from "./assets/sections.js?v=20261127194353";
 renderChrome(await getSettings(), "markets");
 const today = new Date().toISOString().slice(0, 10);
 const { data } = await sb.from("events").select("*").or(`ends_on.gte.${today},and(ends_on.is.null,starts_on.gte.${today})`).order("starts_on");

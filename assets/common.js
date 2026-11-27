@@ -1,5 +1,5 @@
-import { createClient } from "./vendor/supabase.js?v=20261127170101";
-import { SUPABASE_URL, SUPABASE_KEY } from "./config.js?v=20261127170101";
+import { createClient } from "./vendor/supabase.js?v=20261127194353";
+import { SUPABASE_URL, SUPABASE_KEY } from "./config.js?v=20261127194353";
 
 // Some phones can't open animated WebP files (for example iPhones in Lockdown Mode).
 // If an animation fails to load, swap in the animated-PNG copy instead.
