@@ -1,7 +1,7 @@
 // Homepage sections: what each section type is, what settings it has, and how it looks.
 // The admin "Homepage" tab builds its editor from SECTION_TYPES, and index.html renders them.
-import { esc, safeUrl, money, isLocked, dropLabel } from "./common.js?v=20261127163239";
-import { marked, DOMPurify } from "./vendor/markdown.js?v=20261127163239";
+import { esc, safeUrl, money, isLocked, dropLabel } from "./common.js?v=20261127170101";
+import { marked, DOMPurify } from "./vendor/markdown.js?v=20261127170101";
 
 export const md = (text) => DOMPurify.sanitize(marked.parse(text || ""));
 export const linkOk = (u) => /^(https?:\/\/|#|[a-z0-9_-]+\.html)/i.test(u || "");

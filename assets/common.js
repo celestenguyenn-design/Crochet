@@ -1,5 +1,5 @@
-import { createClient } from "./vendor/supabase.js?v=20261127163239";
-import { SUPABASE_URL, SUPABASE_KEY } from "./config.js?v=20261127163239";
+import { createClient } from "./vendor/supabase.js?v=20261127170101";
+import { SUPABASE_URL, SUPABASE_KEY } from "./config.js?v=20261127170101";
 
 // Some phones can't open animated WebP files (for example iPhones in Lockdown Mode).
 // If an animation fails to load, swap in the animated-PNG copy instead.
@@ -86,8 +86,8 @@ export function renderChrome(s, active, pages = null) {
       <nav id="main-nav">
         ${link("index.html", "Home", "shop")}
         <div class="nav-drop">
-          <a href="index.html#shop" class="${String(active).startsWith("cat-") ? "active" : ""}">Shop <span class="caret">▾</span></a>
-          <div class="drop" id="shop-menu"><a href="index.html#shop">🛍️ Shop all</a></div>
+          <a href="shop.html" class="${String(active).startsWith("cat-") || active === "shop-all" ? "active" : ""}">Shop <span class="caret">▾</span></a>
+          <div class="drop" id="shop-menu"><a href="shop.html">🛍️ Shop all</a></div>
         </div>
         <span id="nav-cats" class="nav-cats"></span>
         ${link("custom.html", "Custom Orders", "custom")}
@@ -236,9 +236,9 @@ function paintCategoryMenu(active) {
   const paint = (cats) => {
     const menu = document.getElementById("shop-menu"), mob = document.getElementById("nav-cats");
     if (!menu) return;
-    menu.innerHTML = `<a href="index.html#shop">🛍️ Shop all</a>` + cats.map((c) => `<a href="category.html?c=${encodeURIComponent(c.slug)}">${esc(c.emoji || "")} ${esc(c.name)}</a>`).join("");
+    menu.innerHTML = `<a href="shop.html">🛍️ Shop all</a>` + cats.map((c) => `<a href="category.html?c=${encodeURIComponent(c.slug)}">${esc(c.emoji || "")} ${esc(c.name)}</a>`).join("");
     // phones: category links sit right in the scrolling menu
-    mob.innerHTML = `<a href="index.html#shop">🛍️ Shop all</a>` + cats.map((c) => `<a href="category.html?c=${encodeURIComponent(c.slug)}" class="${active === "cat-" + c.slug ? "active" : ""}">${esc(c.emoji || "")} ${esc(c.name)}</a>`).join("");
+    mob.innerHTML = `<a href="shop.html">🛍️ Shop all</a>` + cats.map((c) => `<a href="category.html?c=${encodeURIComponent(c.slug)}" class="${active === "cat-" + c.slug ? "active" : ""}">${esc(c.emoji || "")} ${esc(c.name)}</a>`).join("");
   };
   let cached = []; try { cached = JSON.parse(localStorage.getItem("menu_cats")) || []; } catch {}
   paint(cached);

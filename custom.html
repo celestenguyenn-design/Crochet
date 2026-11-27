@@ -6,7 +6,7 @@
 <title>Custom Orders</title>
 <link rel="icon" href="assets/icon/favicon-32.png" sizes="32x32">
 <link rel="apple-touch-icon" href="assets/icon/apple-touch.png">
-<link rel="stylesheet" href="assets/style.css?v=20261127163239">
+<link rel="stylesheet" href="assets/style.css?v=20261127170101">
 <!--og-->
 <meta name="description" content="Request a custom crochet plushie, flower bouquet or polymer clay piece.">
 <link rel="canonical" href="https://celestenguyenn-design.github.io/Crochet/custom.html">
@@ -60,7 +60,7 @@
   <div id="done" class="notice" style="display:none"><h2>Request sent! 💌</h2><p>Thanks! I'll email you soon with a quote.</p></div>
 </main>
 <script type="module">
-import { sb, getSettings, renderChrome, toast, esc } from "./assets/common.js?v=20261127163239";
+import { sb, getSettings, renderChrome, toast, esc } from "./assets/common.js?v=20261127170101";
 const settings = await getSettings();
 renderChrome(settings, "custom");
 if (settings.custom_open === false) {
@@ -68,7 +68,7 @@ if (settings.custom_open === false) {
   document.getElementById("form").outerHTML = `<div class="card closed-box"><img class="sleepy-mascot" src="assets/art/girl-sleepy-anim.webp" data-fb="assets/art/apng/girl-sleepy-anim.png" alt="" width="180" height="225">
     <h2>Custom orders are closed${settings.custom_reopen_text ? ` until ${esc(settings.custom_reopen_text)}` : ""}</h2>
     <p style="white-space:pre-wrap">${esc(settings.custom_closed_message || "")}</p>
-    <p><a class="btn" href="index.html#shop">Shop ready-made pieces</a> ${ig ? `<a class="btn secondary" href="${esc(ig)}" target="_blank" rel="noopener">Follow on Instagram</a>` : ""}</p></div>`;
+    <p><a class="btn" href="shop.html">Shop ready-made pieces</a> ${ig ? `<a class="btn secondary" href="${esc(ig)}" target="_blank" rel="noopener">Follow on Instagram</a>` : ""}</p></div>`;
   document.querySelector("main > p.muted")?.remove();
 }
 const kind = new URLSearchParams(location.search).get("kind");

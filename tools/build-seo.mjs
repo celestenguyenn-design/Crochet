@@ -92,9 +92,10 @@ for (const dir of ["p", "pt", "c"]) {
 const main = {
   "index.html": [shop, tagline],
   "patterns.html": [`Free crochet patterns | ${shop}`, "Free crochet patterns with step-by-step photos."],
+  "shop.html": [`Shop All | ${shop}`, "Handmade crochet plushies, pipe cleaner flowers, polymer clay, crochet patterns and stickers."],
   "custom.html": [`Custom orders | ${shop}`, "Request a custom crochet plushie, flower bouquet or polymer clay piece."],
   "contact.html": [`Contact | ${shop}`, `Questions about an order or a custom piece? Get in touch with ${shop}.`],
-  "faq.html": [`FAQ | ${shop}`, "Pickup, shipping, payments and custom orders — answered."],
+  "faq.html": [`FAQ | ${shop}`, "Pickup, shipping, payments and custom orders, all answered."],
 };
 for (const [file, [title, desc]] of Object.entries(main)) {
   const f = path.join(ROOT, file);

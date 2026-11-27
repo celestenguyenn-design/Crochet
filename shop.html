@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shop All</title>
+<link rel="icon" href="assets/icon/favicon-32.png" sizes="32x32">
+<link rel="apple-touch-icon" href="assets/icon/apple-touch.png">
+<link rel="stylesheet" href="assets/style.css?v=20261127170101">
+</head>
+<body>
+<header id="site-header"></header>
+<main class="container" id="shop-page"><p class="muted">Loading…</p></main>
+<footer id="site-footer"></footer>
+<script type="module">
+import { sb, getSettings, renderChrome, esc, cart, toast, startCountdowns } from "./assets/common.js?v=20261127170101";
+import { productCard, wireCarousels } from "./assets/sections.js?v=20261127170101";
+// Everything in the shop on one page, with little buttons to filter by category.
+const s = await getSettings();
+renderChrome(s, "shop-all");
+const el = document.getElementById("shop-page");
+const [{ data: cats }, { data: all }] = await Promise.all([
+  sb.from("categories").select("*").order("sort_order").order("name"),
+  sb.from("products").select("*").eq("active", true).order("sort_order").order("created_at", { ascending: false }),
+]);
+// A pre-order with no spots left is hidden, same as on the homepage.
+const products = (all || []).filter((p) => !(p.preorder && p.stock === 0));
+const order = new Map((cats || []).map((c, i) => [c.id, i]));
+products.sort((a, b) => (order.get(a.category_id) ?? 99) - (order.get(b.category_id) ?? 99));
+const used = (cats || []).filter((c) => products.some((p) => p.category_id === c.id));
+el.innerHTML = `<h1>🛍️ Shop All</h1>
+  <div class="chips" style="margin:6px 0 22px">${["<button class=\"chip active\" data-cat=\"\">All</button>", ...used.map((c) => `<button class="chip" data-cat="${c.id}">${c.emoji ? esc(c.emoji) + " " : ""}${esc(c.name)}</button>`)].join("")}</div>
+  <div class="grid" id="grid">${products.length ? products.map((p) => productCard(p).replace(/^<(\w+)/, `<$1 data-cat-item="${p.category_id || ""}"`)).join("")
+    : `<div class="card center" style="grid-column:1/-1"><p>New pieces are coming soon! 💕</p></div>`}</div>`;
+wireCarousels(el); startCountdowns(el);
+const pick = new URLSearchParams(location.search).get("cat");
+const filter = (id) => {
+  el.querySelectorAll(".chip").forEach((c) => c.classList.toggle("active", c.dataset.cat === (id || "")));
+  el.querySelectorAll("[data-cat-item]").forEach((it) => (it.style.display = !id || it.dataset.catItem === id ? "" : "none"));
+};
+if (pick) filter(used.find((c) => c.slug === pick)?.id || "");
+el.addEventListener("click", (e) => {
+  const chip = e.target.closest(".chip"); if (chip) return filter(chip.dataset.cat);
+  const add = e.target.closest("[data-add]"); if (!add) return;
+  const p = products.find((x) => x.id === add.dataset.add);
+  if (p.stock !== null && cart.countOf(p.id) >= p.stock) return toast(`Only ${p.stock} available`);
+  cart.add(p); toast(`Added ${p.name} to cart`);
+});
+</script>
+</body>
+</html>
