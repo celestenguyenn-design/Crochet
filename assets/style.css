@@ -737,6 +737,4 @@ body::after { content: ""; position: fixed; inset: -200px 0 0; z-index: -1; poin
   #mini-header .cart-word { display: none; }
 }
 
-/* Pre-orders: a soft pastel card so it stands out from the pink background (not a plain white block) */
-#home > .home-section[data-type=preorders] > section { background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 45%, var(--bg)), color-mix(in srgb, var(--primary) 22%, var(--bg)));
-  border: 2px dashed color-mix(in srgb, var(--primary) 45%, transparent); border-radius: 36px; padding: 26px clamp(14px, 3vw, 34px); }
+/* Pre-orders sit straight on the page background: just the title and the items, no card behind them */
