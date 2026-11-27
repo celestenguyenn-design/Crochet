@@ -243,7 +243,7 @@ async function loadOrders() {
   el.querySelectorAll(".order").forEach((card) => {
     const o = orders.find((x) => x.id === card.dataset.id);
     card.querySelector("[data-act=deposit]")?.addEventListener("click", () => save(o.id, { payment_status: "deposit_paid", amount_paid_cents: o.deposit_cents, status: o.status === "new" ? "in_progress" : o.status }));
-    card.querySelector("[data-act=full]")?.addEventListener("click", () => save(o.id, { payment_status: "paid", amount_paid_cents: o.total_cents }));
+    card.querySelector("[data-act=full]")?.addEventListener("click", () => save(o.id, { payment_status: "paid", amount_paid_cents: o.total_cents, shipping_pending: false }));
     card.querySelector("[data-act=orderlink]")?.addEventListener("click", async () => {
       await navigator.clipboard.writeText((settings.site_url || location.href.replace(/[^/]*$/, "")).replace(/\/?$/, "/") + "order.html?n=" + o.order_number);
       toast("Copied! They enter their email there to download.");
@@ -301,7 +301,7 @@ function orderCard(o) {
   const pm = { zelle: "Zelle", venmo: "Venmo", paypal: "PayPal", pickup: "Pay at pickup" }[o.payment_method];
   const owed = owedOf(o), paidAmt = o.amount_paid_cents || 0;
   const badge = o.payment_status === "refunded" ? `<div class="paybadge grey">REFUNDED</div>`
-    : o.shipping_pending ? `<div class="paybadge yellow">${paidAmt > 0 ? `PAID ${money(paidAmt)} · ` : ""}SHIPPING NOT PAID YET</div>`
+    : o.shipping_pending && o.payment_status !== "paid" ? `<div class="paybadge yellow">${paidAmt > 0 ? `PAID ${money(paidAmt)} · ` : ""}SHIPPING NOT PAID YET</div>`
     : o.payment_status === "paid" || (owed === 0 && o.total_cents > 0) ? `<div class="paybadge green">✓ PAID IN FULL</div>`
     : paidAmt > 0 ? `<div class="paybadge yellow">PARTLY PAID · OWES ${money(owed)}</div>`
     : `<div class="paybadge red">NOTHING PAID · ${o.deposit_cents && o.deposit_cents < o.total_cents ? `${money(o.deposit_cents)} DEPOSIT DUE` : `${money(o.total_cents)} DUE`}</div>`;
