@@ -650,7 +650,7 @@ body {
 /* Slowly drifting sparkles and hearts behind everything */
 body::after { content: ""; position: fixed; inset: -200px 0 0; z-index: -1; pointer-events: none;
   background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='360' height='400'%3E%3Cpath d='M40 60l3 9 9 3-9 3-3 9-3-9-9-3 9-3z' fill='%23ffffff'/%3E%3Cpath d='M260 120c-5-6-15-1-9 7l9 8 9-8c6-8-4-13-9-7z' fill='%23ffc2d8'/%3E%3Cpath d='M300 300l2 6 6 2-6 2-2 6-2-6-6-2 6-2z' fill='%23fff3a8'/%3E%3Ccircle cx='150' cy='230' r='3' fill='%23ffffff'/%3E%3Cpath d='M90 330c-4-5-12-1-7 6l7 6 7-6c5-7-3-11-7-6z' fill='%23e2cff8'/%3E%3C/svg%3E") 0 0 / 360px 400px;
-  opacity: .85; animation: drift 38s linear infinite; }
+  opacity: .85; }
 @keyframes drift { to { transform: translateY(200px); } }
 @media (prefers-reduced-motion: reduce) { body::after { animation: none; } }
 
@@ -668,10 +668,10 @@ body::after { content: ""; position: fixed; inset: -200px 0 0; z-index: -1; poin
 .gallery-track { display: flex; gap: 18px; width: max-content; animation: slide calc(var(--n) * 4.5s) linear infinite;
   will-change: transform; backface-visibility: hidden; transform: translate3d(0,0,0); }
 .gallery-strip:hover .gallery-track { animation-play-state: paused; }
-.gallery-track figure { flex: 0 0 200px; margin: 0; background: var(--card); padding: 8px 8px 14px; border-radius: var(--radius); cursor: zoom-in; position: relative;
+.gallery-track figure { flex: 0 0 200px; transition: none; margin: 0; background: var(--card); padding: 8px 8px 14px; border-radius: var(--radius); cursor: zoom-in; position: relative;
   box-shadow: 0 4px 10px color-mix(in srgb, var(--primary) 14%, transparent); transition: transform .2s; }
-.gallery-track figure:nth-child(odd) { transform: rotate(-1.5deg); } .gallery-track figure:nth-child(even) { transform: rotate(1.2deg) translateY(6px); }
-.gallery-track figure:hover { transform: scale(1.04) rotate(0); }
+.gallery-track figure:nth-child(even) { margin-top: 8px; }
+.gallery-strip.paused .gallery-track { animation-play-state: paused; }
 .gallery-track img { width: 100%; aspect-ratio: 4 / 5; object-fit: cover; border-radius: calc(var(--radius) - 10px); display: block; }
 .gallery-track figcaption { font-size: .85rem; text-align: center; margin-top: 6px; }
 @keyframes slide { from { transform: translate3d(0,0,0); } to { transform: translate3d(calc(-50% - 9px),0,0); } }
@@ -690,3 +690,12 @@ body::after { content: ""; position: fixed; inset: -200px 0 0; z-index: -1; poin
 /* Buttons get a little bounce */
 .btn { transition: transform .15s ease, box-shadow .2s ease; }
 .btn:hover { transform: translateY(-2px) scale(1.03); box-shadow: 0 8px 18px color-mix(in srgb, var(--primary) 30%, transparent); }
+
+/* Header logo: the animated mascot (no circle crop, so nothing gets cut off) */
+.header-inner .logo-img.logo-anim, .header-inner.centered .logo-img.logo-anim { height: 86px; max-height: none; width: auto; border-radius: 0; box-shadow: none; object-fit: contain; }
+@media (max-width: 640px) { .header-inner .logo-img.logo-anim, .header-inner.centered .logo-img.logo-anim { height: 56px; max-height: none; } }
+
+/* Photo rows inside free patterns */
+.content .pgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin: 12px 0 20px; }
+.content .pgrid img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 14px; box-shadow: 0 4px 10px color-mix(in srgb, var(--primary) 14%, transparent); }
+@media print { .content .pgrid { grid-template-columns: repeat(4, 1fr); } }

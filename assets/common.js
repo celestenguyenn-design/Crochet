@@ -66,7 +66,7 @@ export async function getSettings() {
 
 // ---------- Layout ----------
 export function renderChrome(s, active, pages = null) {
-  const logo = (safeUrl(s.logo_url) ? `<img src="${esc(s.logo_url)}" alt="" class="logo-img">` : "") + `<span class="logo-text">${esc(s.shop_name)}</span>`;
+  const logo = `<img src="${new URL("art/logo-anim.webp", import.meta.url).href}" data-fb="${new URL("art/apng/logo-anim.png", import.meta.url).href}" alt="" class="logo-img logo-anim">` + `<span class="logo-text">${esc(s.shop_name)}</span>`;
   const link = (href, label, key) => `<a href="${href}" class="${active === key ? "active" : ""}">${label}</a>`;
   const annLink = /^(https?:\/\/|#|[a-z0-9_-]+\.html)/i.test(s.announcement_link || "") ? s.announcement_link : "";
   const annText = s.announcement_enabled && s.announcement_text
