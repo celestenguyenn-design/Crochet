@@ -76,7 +76,7 @@ export function renderChrome(s, active, pages = null) {
     safeUrl(s.tiktok_url) && `<a href="${esc(s.tiktok_url)}" target="_blank" rel="noopener" aria-label="TikTok" title="TikTok">${ICONS.tiktok}</a>`,
   ].filter(Boolean).join("");
   const ann = annText || icons ? `<div class="announcement"><div class="ann-text">${annText}</div>${icons ? `<div class="ann-social">${icons}</div>` : ""}</div>` : "";
-  const infoActive = ["about", "contact", "markets", "faq", "order"].includes(active) ? "active" : "";
+  const infoActive = ["about", "contact", "faq", "order"].includes(active) ? "active" : "";
   const centered = (s.header_style || "centered") === "centered";
   document.getElementById("site-header").innerHTML = `${ann}
     <div class="container header-inner ${centered ? "centered" : ""}">
@@ -95,17 +95,25 @@ export function renderChrome(s, active, pages = null) {
         <div class="nav-drop">
           <a href="page.html?p=about" class="${infoActive}">Info <span class="caret">▾</span></a>
           <div class="drop drop-info">
-            <a href="page.html?p=about">💕 About me</a><a href="markets.html">📍 Markets</a><a href="faq.html">❓ FAQ</a>
+            <a href="page.html?p=about">💕 About me</a><a href="faq.html">❓ FAQ</a>
             <a href="contact.html">💌 Contact</a><a href="order.html">📦 Check my order</a>
           </div>
         </div>
         <span class="nav-info-mobile">
-          ${link("page.html?p=about", "About me", "about")}${link("markets.html", "Markets", "markets")}${link("faq.html", "FAQ", "faq")}
+          ${link("page.html?p=about", "About me", "about")}${link("faq.html", "FAQ", "faq")}
           ${link("contact.html", "Contact", "contact")}${link("order.html", "Check my order", "order")}
         </span>
       </nav>
     </div>`;
   const btn = document.getElementById("menu-btn"), nav = document.getElementById("main-nav");
+  // On phones, tapping "Shop ▾" or "Info ▾" opens its list instead of leaving the page.
+  nav.querySelectorAll(".nav-drop > a").forEach((a) => a.addEventListener("click", (e) => {
+    if (!matchMedia("(max-width: 640px)").matches) return;
+    e.preventDefault();
+    const d = a.parentElement, open = !d.classList.contains("open");
+    nav.querySelectorAll(".nav-drop.open").forEach((x) => x.classList.remove("open"));
+    d.classList.toggle("open", open);
+  }));
   btn.onclick = () => { const open = nav.classList.toggle("open"); btn.setAttribute("aria-expanded", open); btn.textContent = open ? "✕" : "☰"; };
   const socials = [
     safeUrl(s.instagram_url) && `<a href="${esc(s.instagram_url)}" target="_blank" rel="noopener">Instagram</a>`,
