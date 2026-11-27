@@ -6,20 +6,20 @@
 <title>FAQ</title>
 <link rel="icon" href="assets/icon/favicon-32.png" sizes="32x32">
 <link rel="apple-touch-icon" href="assets/icon/apple-touch.png">
-<link rel="stylesheet" href="assets/style.css?v=20261127194353">
+<link rel="stylesheet" href="assets/style.css?v=20261127194427">
 <!--og-->
-<meta name="description" content="Pickup, shipping, payments and custom orders — answered.">
+<meta name="description" content="Pickup, shipping, payments and custom orders, all answered.">
 <link rel="canonical" href="https://celestenguyenn-design.github.io/Crochet/faq.html">
 <meta property="og:site_name" content="hookedbyceleste">
 <meta property="og:type" content="website">
 <meta property="og:title" content="FAQ | hookedbyceleste">
-<meta property="og:description" content="Pickup, shipping, payments and custom orders — answered.">
+<meta property="og:description" content="Pickup, shipping, payments and custom orders, all answered.">
 <meta property="og:url" content="https://celestenguyenn-design.github.io/Crochet/faq.html">
 <meta property="og:image" content="https://vujfyzsbuagarlhtyebs.supabase.co/storage/v1/object/public/images/1795728217322-x5mzgy.png">
 <meta name="twitter:image" content="https://vujfyzsbuagarlhtyebs.supabase.co/storage/v1/object/public/images/1795728217322-x5mzgy.png">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="FAQ | hookedbyceleste">
-<meta name="twitter:description" content="Pickup, shipping, payments and custom orders — answered.">
+<meta name="twitter:description" content="Pickup, shipping, payments and custom orders, all answered.">
 
 <!--/og-->
 </head>
@@ -28,8 +28,8 @@
 <main class="container article"><h1>Frequently Asked Questions</h1><div id="faq"><p class="muted">Loading…</p></div>
 <div class="notice center" style="margin-top:28px"><p>Still have a question?</p><a class="btn" href="custom.html">Send me a message</a></div></main>
 <script type="module">
-import { sb, getSettings, renderChrome } from "./assets/common.js?v=20261127194353";
-import { faqList } from "./assets/sections.js?v=20261127194353";
+import { sb, getSettings, renderChrome } from "./assets/common.js?v=20261127194427";
+import { faqList } from "./assets/sections.js?v=20261127194427";
 renderChrome(await getSettings(), "");
 const { data } = await sb.from("faqs").select("*").order("sort_order");
 document.getElementById("faq").innerHTML = data?.length ? faqList(data) : `<p class="muted">No questions yet.</p>`;
