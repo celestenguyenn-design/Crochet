@@ -62,21 +62,21 @@ def box_sticker(color="pink"):
     light, dark, line, txt = BANNERS[color]
     art = load("sticker-box-hug")
     art = art.resize((900, round(art.height * 900 / art.width)), Image.LANCZOS)
-    W, H = 1100, art.height + 230
+    W, H = 1100, art.height + 170
     c = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     c.alpha_composite(art, ((W - art.width) // 2, 0))
     d = ImageDraw.Draw(c)
-    # ribbon banner with the shop name
-    by, bh, bx0, bx1 = art.height - 70, 170, 40, W - 40
+    # ribbon banner with the shop name, stacked on two short lines ("hooked by" / "celeste")
+    by, bh, bx0, bx1 = art.height - 110, 230, 170, W - 170
     tail = 60
     for side in (0, 1):
         x = bx0 if side == 0 else bx1
         s = 1 if side == 0 else -1
-        d.polygon([(x - s * 30, by + 40), (x + s * (tail + 10), by + 40), (x + s * (tail + 10), by + bh + 40),
-                   (x - s * 30, by + bh + 40), (x + s * 20, by + bh / 2 + 40)], fill=dark, outline=line, width=6)
-    d.rounded_rectangle([bx0 + tail - 20, by, bx1 - tail + 20, by + bh], 30, fill=light, outline=line, width=7)
-    f = ImageFont.truetype(str(FONT), 112)
-    d.text((W / 2, by + bh / 2 + 4), "hookedbyceleste", font=f, anchor="mm", fill="white", stroke_width=6, stroke_fill=txt)
+        d.polygon([(x - s * 30, by + 50), (x + s * (tail + 10), by + 50), (x + s * (tail + 10), by + bh + 30),
+                   (x - s * 30, by + bh + 30), (x + s * 20, by + bh / 2 + 40)], fill=dark, outline=line, width=6)
+    d.rounded_rectangle([bx0 + tail - 20, by, bx1 - tail + 20, by + bh], 34, fill=light, outline=line, width=7)
+    d.text((W / 2, by + 62), "hooked by", font=ImageFont.truetype(str(FONT), 64), anchor="mm", fill="white", stroke_width=5, stroke_fill=txt)
+    d.text((W / 2, by + 152), "celeste", font=ImageFont.truetype(str(FONT), 118), anchor="mm", fill="white", stroke_width=6, stroke_fill=txt)
     # red FRAGILE stamp, tilted, top right
     st = Image.new("RGBA", (470, 160), (0, 0, 0, 0))
     sd = ImageDraw.Draw(st)
