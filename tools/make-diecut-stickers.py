@@ -81,6 +81,59 @@ LETTERING = {
 }
 
 
+def arc_text(text, f, fill, line, radius, top=True, white=10, outer=6):
+    """Draws text along a circle arc (over the top, or smiling under the bottom), letter by letter,
+    each with the sticker-style white rim. Returns an RGBA image centred on the circle centre."""
+    size = int(radius * 2 + f.size * 4)
+    img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    cx = cy = size / 2
+    widths = [f.getlength(ch) for ch in text]
+    total = sum(widths) * 1.03
+    ang = -total / radius / 2                     # start angle (radians), centred on the top/bottom
+    import math
+    for ch, w in zip(text, widths):
+        mid = ang + (w * 1.03) / 2 / radius
+        g = Image.new("RGBA", (int(f.size * 2.2), int(f.size * 2.2)), (0, 0, 0, 0))
+        gd = ImageDraw.Draw(g)
+        outlined(gd, (g.width / 2, g.height / 2), ch, f, fill, line, white, outer)
+        if top:
+            x, y, rot = cx + radius * math.sin(mid), cy - radius * math.cos(mid), -math.degrees(mid)
+        else:
+            x, y, rot = cx - radius * math.sin(mid) * -1, cy + radius * math.cos(mid), math.degrees(mid)
+        g = g.rotate(rot, resample=Image.BICUBIC)
+        img.alpha_composite(g, (int(x - g.width / 2), int(y - g.height / 2)))
+        ang += (w * 1.03) / radius
+    return img
+
+
+def box_arc(color="pink", where="top"):
+    """Box sticker with HookedByCeleste curved over her head or under her feet (lettering style 4)."""
+    light, dark, line, txt = BANNERS[color]
+    art = load("sticker-box-hug")
+    art = art.resize((900, round(art.height * 900 / art.width)), Image.LANCZOS)
+    W, H = 1500, art.height + 700
+    c = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    ax, ay = (W - art.width) // 2, 330 if where == "top" else 60
+    c.alpha_composite(art, (ax, ay))
+    f = font("chewy", 150)
+    R = 600
+    t = arc_text("HookedByCeleste", f, dark, line, R, top=(where == "top"))
+    cx, cy = W / 2, (ay + art.height * 0.62) if where == "top" else (ay + art.height * 0.30)
+    c.alpha_composite(t, (int(cx - t.width / 2), int(cy - t.height / 2)))
+    # FRAGILE stamp
+    st = Image.new("RGBA", (470, 160), (0, 0, 0, 0))
+    sd = ImageDraw.Draw(st)
+    sd.rounded_rectangle([6, 6, 464, 154], 26, fill="white", outline=(224, 72, 95), width=12)
+    sd.rounded_rectangle([24, 24, 446, 136], 16, outline=(224, 72, 95), width=4)
+    sd.text((235, 82), "FRAGILE", font=ImageFont.truetype(str(FONT), 96), anchor="mm", fill=(224, 72, 95))
+    st = st.rotate(-12 if where == "bottom" else 10, expand=True, resample=Image.BICUBIC)
+    if where == "top":
+        c.alpha_composite(st, (int(W / 2 - st.width / 2), ay + art.height - 150))
+    else:
+        c.alpha_composite(st, (ax + art.width - st.width + 120, ay + 10))
+    return diecut(c.crop(c.getbbox()), border=40)
+
+
 def box_sticker(color="pink", lettering="stacked"):
     light, dark, line, txt = BANNERS[color]
     art = load("sticker-box-hug")
@@ -223,6 +276,12 @@ if __name__ == "__main__":
         lv.paste(o, (x0 + (cw - 80 - o.width) // 2, y0 + (chh - 150 - o.height)), o)
         ld.text((x0 + (cw - 80) / 2, y0 + chh - 80), f"{i + 1}", font=f2, anchor="mm", fill=(91, 68, 99))
     lv.save(OUT / "box-lettering-options.png")
+    arcs = [scaled(box_arc("pink", w), 2.6, 2.6) for w in ("top", "bottom")]
+    av = Image.new("RGB", (sum(a.width for a in arcs) + 240, max(a.height for a in arcs) + 200), (236, 228, 240)); adr = ImageDraw.Draw(av)
+    x = 80
+    for lab, a_ in zip(("A · over her head", "B · under her feet"), arcs):
+        av.paste(a_, (x, 60), a_); adr.text((x + a_.width / 2, av.height - 70), lab, font=f2, anchor="mm", fill=(91, 68, 99)); x += a_.width + 80
+    av.save(OUT / "box-curved-name.png")
     f = ImageFont.truetype(str(FONT), 54)
     bv = Image.new("RGB", (sum(o.width for o in opts) + 80 * (len(opts) + 1), max(o.height for o in opts) + 200), (236, 228, 240))
     x, d = 80, ImageDraw.Draw(bv)
