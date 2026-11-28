@@ -96,6 +96,7 @@ const main = {
   "custom.html": [`Custom orders | ${shop}`, "Request a custom crochet plushie, flower bouquet or polymer clay piece."],
   "contact.html": [`Contact | ${shop}`, `Questions about an order or a custom piece? Get in touch with ${shop}.`],
   "faq.html": [`FAQ | ${shop}`, "Pickup, shipping, payments and custom orders, all answered."],
+  "markets.html": [`Markets | ${shop}`, `Where to find ${shop} at upcoming craft markets and pop-ups.`],
 };
 for (const [file, [title, desc]] of Object.entries(main)) {
   const f = path.join(ROOT, file);
@@ -107,7 +108,7 @@ for (const [file, [title, desc]] of Object.entries(main)) {
 
 // Google: sitemap + robots
 const urls = [
-  ...["", "patterns.html", "custom.html", "contact.html", "faq.html", "page.html?p=about"].map((u) => site + u),
+  ...["", "shop.html", "patterns.html", "markets.html", "custom.html", "contact.html", "faq.html", "page.html?p=about"].map((u) => site + u),
   ...categories.map((c) => site + `category.html?c=${encodeURIComponent(c.slug)}`),
   ...products.map((p) => site + `product.html?id=${p.id}`),
   ...patterns.map((p) => site + `pattern.html?p=${encodeURIComponent(p.slug)}`),
