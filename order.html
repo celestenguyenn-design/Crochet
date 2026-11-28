@@ -6,7 +6,7 @@
 <title>Order status</title>
 <link rel="icon" href="assets/icon/favicon-32.png" sizes="32x32">
 <link rel="apple-touch-icon" href="assets/icon/apple-touch.png">
-<link rel="stylesheet" href="assets/style.css?v=20261128060727">
+<link rel="stylesheet" href="assets/style.css?v=20261128062026">
 </head>
 <body>
 <header id="site-header"></header>
@@ -25,8 +25,8 @@
 </main>
 <footer id="site-footer"></footer>
 <script type="module">
-import { sb, getSettings, renderChrome, esc, money, safeUrl } from "./assets/common.js?v=20261128060727";
-import { SUPABASE_URL, SUPABASE_KEY } from "./assets/config.js?v=20261128060727";
+import { sb, getSettings, renderChrome, esc, money, safeUrl } from "./assets/common.js?v=20261128062026";
+import { SUPABASE_URL, SUPABASE_KEY } from "./assets/config.js?v=20261128062026";
 const s = await getSettings();
 renderChrome(s, "");
 const STEPS = [["new", "Received", "📝"], ["in_progress", "Being made", "🧶"], ["ready", "Ready for pickup", "🎀"], ["picked_up", "Picked up", "💖"]];
@@ -73,7 +73,8 @@ document.getElementById("form").addEventListener("submit", async (e) => {
     ${o.payment_method === "card" && owed > 0 && o.status !== "cancelled" && !["paid", "refunded"].includes(o.payment_status) ? `<p><button class="btn" id="pay-card">💳 Pay ${money(o.payment_status === "unpaid" && o.deposit_cents && o.deposit_cents < o.total_cents ? o.deposit_cents : owed)} by card</button></p>` : ""}
     ${owed > 0 && o.status !== "cancelled" && safeUrl(s[o.payment_method + "_qr_url"]) ? `<div class="pay-qr"><img src="${esc(s[o.payment_method + "_qr_url"])}" alt="QR code to pay"><p class="muted">Scan to pay · put <b>Order #${o.order_number}</b> in the note</p></div>` : ""}
     ${o.status === "shipped" && o.tracking_number ? `<p class="notice"><b>Tracking:</b> <a href="https://tools.usps.com/go/TrackConfirmAction?tLabels=${encodeURIComponent(o.tracking_number)}" target="_blank" rel="noopener">${esc(o.tracking_number)}</a></p>` : ""}
-    ${o.status === "ready" && o.fulfillment !== "shipping" ? `<p class="notice"><b>Pickup:</b> ${esc(s.pickup_location)}${o.pickup_instructions ? `<br>${esc(o.pickup_instructions)}` : ""}</p>` : ""}
+    ${o.fulfillment === "pickup" ? (o.pickup_instructions ? `<p class="notice" style="white-space:pre-wrap"><b>📍 Pickup${o.status === "ready" ? " (ready now!)" : ""}:</b> ${esc(s.pickup_location)}\n${esc(o.pickup_instructions)}</p>`
+      : o.pickup_hidden && o.status !== "cancelled" ? `<p class="notice">📍 Pickup complete 💕 Message me if you need the address again.</p>` : "") : ""}
     ${o.has_digital ? `<div class="digital-box" id="downloads">${o.payment_status === "paid" ? "Getting your download…" : "📄 <b>Your pattern download unlocks here</b> as soon as your payment is confirmed. Check back soon!"}</div>` : ""}
     <p class="muted">Ordered ${new Date(o.created_at).toLocaleDateString(undefined, { dateStyle: "medium" })}</p></div>
     <div id="review-box"></div>`;

@@ -7,7 +7,7 @@
 <title>Admin</title>
 <link rel="icon" href="assets/icon/favicon-32.png" sizes="32x32">
 <link rel="apple-touch-icon" href="assets/icon/apple-touch.png">
-<link rel="stylesheet" href="assets/style.css?v=20261128060727">
+<link rel="stylesheet" href="assets/style.css?v=20261128062026">
 <style>
   .tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 24px; }
   .tabs button { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 8px 14px; font: inherit; font-weight: 700; cursor: pointer; color: var(--text); }
@@ -139,9 +139,9 @@
 <dialog id="dlg"></dialog>
 
 <script type="module">
-import { sb, getSettings, applyTheme, esc, money, safeUrl, toast, FONTS } from "./assets/common.js?v=20261128060727";
-import { SECTION_TYPES, newSection } from "./assets/sections.js?v=20261128060727";
-import { renderPostHelper } from "./assets/post-helper.js?v=20261128060727";
+import { sb, getSettings, applyTheme, esc, money, safeUrl, toast, FONTS } from "./assets/common.js?v=20261128062026";
+import { SECTION_TYPES, newSection } from "./assets/sections.js?v=20261128062026";
+import { renderPostHelper } from "./assets/post-helper.js?v=20261128062026";
 
 let settings = await getSettings();
 let privateSettings = { pickup_instructions: "" };
@@ -264,7 +264,7 @@ async function loadOrders() {
       if (kind === "shipped" && !trk && !confirm("No tracking number yet. Send the message without one?")) return;
       const msg = {
         in_progress: `Hi ${first}! Just letting you know I've started making your order #${o.order_number} 🧶 I'll message you again when it's ready. You can check on it anytime here: ${link}\n\nThank you so much! 💕\nCeleste, ${settings.shop_name}`,
-        ready: `Hi ${first}! Your order #${o.order_number} is ready for pickup 🎉\n\n${settings.pickup_location || ""}${privateSettings.pickup_instructions ? "\n" + privateSettings.pickup_instructions : ""}${owed > 0 ? `\n\nThe remaining balance is ${money(owed)}.` : ""}\n\nThank you so much! 💕\nCeleste, ${settings.shop_name}`,
+        ready: `Hi ${first}! Your order #${o.order_number} is ready for pickup 🎉\n\n📍 Pickup address and details are on your order page: ${link}${owed > 0 ? `\n\nThe remaining balance is ${money(owed)}.` : ""}\n\nThank you so much! 💕\nCeleste, ${settings.shop_name}`,
         shipped: `Hi ${first}! Your order #${o.order_number} just shipped 📦${trk ? `\n\nTracking number: ${trk}\nhttps://tools.usps.com/go/TrackConfirmAction?tLabels=${encodeURIComponent(trk)}` : ""}\n\nThank you so much for supporting my small shop! 💕\nCeleste, ${settings.shop_name}`,
         thanks: `Hi ${first}! Thank you so much for your order #${o.order_number} 💕 I hope you love it! If you have a minute, I'd really appreciate a little review. You can leave one here: ${link}\n\nCeleste, ${settings.shop_name}`,
       }[kind];
@@ -1262,7 +1262,7 @@ function loadSettings() {
     <h2 style="margin-top:28px">Pickup</h2>
     <label>Pickup location (shown at checkout)</label><input name="pickup_location" value="${esc(s.pickup_location)}" placeholder="e.g. Downtown Austin. Exact address sent after ordering.">
     <label>Order note (shown on product pages & checkout)</label><input name="order_note" value="${esc(s.order_note)}" placeholder="e.g. Please allow up to 2 weeks for shipping.">
-    <label>Pickup instructions / address (private: only shown to customers who place a pickup order)</label><textarea name="pickup_instructions">${esc(privateSettings.pickup_instructions)}</textarea>
+    <label>Pickup instructions / address (private: only shown on a customer’s order page while their pickup order is open, hidden once it’s Picked up, Cancelled or 30 days old)</label><textarea name="pickup_instructions">${esc(privateSettings.pickup_instructions)}</textarea>
     <button class="btn" style="margin-top:16px">Save</button></form>`;
   wireUploads($("settings-form"));
   $("settings-form").addEventListener("submit", async (e) => {

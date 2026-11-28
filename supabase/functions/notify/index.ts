@@ -37,9 +37,6 @@ Deno.serve(async (req) => {
     const { type, id } = await req.json();
     if (!RESEND_API_KEY || !OWNER_EMAIL) return Response.json({ skipped: "email not configured" });
     const { data: s } = await db.from("settings").select("*").eq("id", 1).single();
-    // Pickup address lives in private_settings so it isn't readable from the public site.
-    const { data: ps } = await db.from("private_settings").select("pickup_instructions").eq("id", 1).maybeSingle();
-    s.pickup_instructions = ps?.pickup_instructions || "";
 
     if (type === "order") {
       // Claim the order atomically so it's only ever emailed once.
@@ -71,6 +68,7 @@ Deno.serve(async (req) => {
         ${o.customer_notes ? `<p><i>Note:</i> ${esc(o.customer_notes)}</p>` : ""}`), o.email);
 
       if (FROM_EMAIL) {
+        const orderLink = String(s.site_url || "").replace(/\/?$/, "/") + `order.html?n=${o.order_number}`;
         const due = o.deposit_cents || o.total_cents, what = o.deposit_cents && rest > 0 ? "deposit" : "payment";
         let pay = `You'll pay <b>${money(o.total_cents)}</b> at pickup.`;
         if (o.payment_method === "zelle") pay = `Please send your <b>${money(due)} ${what}</b> by Zelle to <b>${esc(s.zelle_handle)}</b> with <b>Order #${o.order_number}</b> in the memo.`;
@@ -82,7 +80,7 @@ Deno.serve(async (req) => {
           ${moneyTable}
           ${o.deposit_cents ? `<p style="background:#fff3cd;padding:8px 12px;border-radius:10px"><b>Your order isn't confirmed until your ${what} is received.</b></p>` : ""}
           <p>${pay}</p>
-          ${o.fulfillment === "digital" ? `<p>📄 Your pattern download will appear on your order page (order #${o.order_number}) as soon as your payment is confirmed.</p>` : ship ? addr : `<p><b>Pickup:</b> ${esc(s.pickup_location)}</p>${s.pickup_instructions ? `<p>${esc(s.pickup_instructions)}</p>` : ""}`}
+          ${o.fulfillment === "digital" ? `<p>📄 Your pattern download will appear on your order page (order #${o.order_number}) as soon as your payment is confirmed.</p>` : ship ? addr : `<p><b>📍 Pickup:</b> the address and details are on <a href="${esc(orderLink)}">your order page</a> (sign in with this email).</p>`}
           ${s.order_note ? `<p>⏳ ${esc(s.order_note)}</p>` : ""}
           <p>Just reply to this email if you have questions!</p>`), OWNER_EMAIL);
       }

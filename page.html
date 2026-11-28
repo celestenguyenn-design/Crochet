@@ -6,14 +6,14 @@
 <title></title>
 <link rel="icon" href="assets/icon/favicon-32.png" sizes="32x32">
 <link rel="apple-touch-icon" href="assets/icon/apple-touch.png">
-<link rel="stylesheet" href="assets/style.css?v=20261128060727">
+<link rel="stylesheet" href="assets/style.css?v=20261128062026">
 </head>
 <body>
 <header id="site-header"></header>
 <main class="container article card" id="page" style="margin-top:32px"><p class="muted">Loading…</p></main>
 <script type="module">
-import { sb, getSettings, renderChrome, esc } from "./assets/common.js?v=20261128060727";
-import { md } from "./assets/sections.js?v=20261128060727";
+import { sb, getSettings, renderChrome, esc } from "./assets/common.js?v=20261128062026";
+import { md } from "./assets/sections.js?v=20261128062026";
 const s = await getSettings();
 const slug = new URLSearchParams(location.search).get("p");
 const { data: pg } = await sb.from("pages").select("*").eq("slug", slug).maybeSingle();
