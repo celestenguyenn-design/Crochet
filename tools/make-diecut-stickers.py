@@ -52,7 +52,14 @@ def diecut(art, border=34, bridge=40):
     return sticker.crop(sticker.getbbox())
 
 
-def box_sticker():
+BANNERS = {"pink": ((244, 166, 198), (226, 122, 168), (150, 70, 110), (190, 80, 130)),
+           "sage": ((168, 200, 160), (130, 170, 122), (78, 110, 72), (90, 130, 84)),
+           "sky": ((160, 200, 235), (118, 168, 214), (62, 104, 150), (74, 120, 170)),
+           "kraft": ((214, 176, 136), (184, 142, 100), (112, 80, 52), (130, 94, 62))}
+
+
+def box_sticker(color="pink"):
+    light, dark, line, txt = BANNERS[color]
     art = load("sticker-box-hug")
     art = art.resize((900, round(art.height * 900 / art.width)), Image.LANCZOS)
     W, H = 1100, art.height + 230
@@ -66,10 +73,10 @@ def box_sticker():
         x = bx0 if side == 0 else bx1
         s = 1 if side == 0 else -1
         d.polygon([(x - s * 30, by + 40), (x + s * (tail + 10), by + 40), (x + s * (tail + 10), by + bh + 40),
-                   (x - s * 30, by + bh + 40), (x + s * 20, by + bh / 2 + 40)], fill=(226, 122, 168), outline=(150, 70, 110), width=6)
-    d.rounded_rectangle([bx0 + tail - 20, by, bx1 - tail + 20, by + bh], 30, fill=(244, 166, 198), outline=(150, 70, 110), width=7)
+                   (x - s * 30, by + bh + 40), (x + s * 20, by + bh / 2 + 40)], fill=dark, outline=line, width=6)
+    d.rounded_rectangle([bx0 + tail - 20, by, bx1 - tail + 20, by + bh], 30, fill=light, outline=line, width=7)
     f = ImageFont.truetype(str(FONT), 112)
-    d.text((W / 2, by + bh / 2 + 4), "hookedbyceleste", font=f, anchor="mm", fill="white", stroke_width=6, stroke_fill=(190, 80, 130))
+    d.text((W / 2, by + bh / 2 + 4), "hookedbyceleste", font=f, anchor="mm", fill="white", stroke_width=6, stroke_fill=txt)
     # red FRAGILE stamp, tilted, top right
     st = Image.new("RGBA", (470, 160), (0, 0, 0, 0))
     sd = ImageDraw.Draw(st)
@@ -153,4 +160,12 @@ if __name__ == "__main__":
     for s in prev:
         pv.paste(s, (x, 60), s); x += s.width + 60
     pv.save(OUT / "sticker-samples.png")
+    # banner colour choices for the box sticker
+    opts = [scaled(box_sticker(c), 2.2, 2.2) for c in BANNERS]
+    f = ImageFont.truetype(str(FONT), 54)
+    bv = Image.new("RGB", (sum(o.width for o in opts) + 80 * (len(opts) + 1), max(o.height for o in opts) + 200), (236, 228, 240))
+    x, d = 80, ImageDraw.Draw(bv)
+    for c, o in zip(BANNERS, opts):
+        bv.paste(o, (x, 60), o); d.text((x + o.width / 2, bv.height - 70), c, font=f, anchor="mm", fill=(91, 68, 99)); x += o.width + 80
+    bv.save(OUT / "box-banner-colors.png")
     print("wrote sticker-samples")
