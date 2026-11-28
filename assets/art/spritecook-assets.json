@@ -1,72 +1,114 @@
 {
-  "mascot-bunny": {
-    "still": "1cd83956-0584-408b-88d3-d61ae3dbc735",
-    "animation": "14174171-3092-49c1-9cfb-8bd2f2e9b462",
-    "sha12": "fe12bc5aa27e"
-  },
-  "mascot-bunny-heart-eyes (alt)": {
-    "still": "2602e3bc-fe30-410f-9684-7f71f1bfd41a"
-  },
-  "cat-crochet": {
-    "still": "2950f38d-7fe8-4a63-83d7-ee93d6508a92",
-    "animation": "8524e1cc-ad5f-4023-8bc3-421cef083dd9",
-    "sha12": "45e792067b53"
-  },
-  "flower-gift": {
-    "still": "72550081-3858-4863-9866-6ca7d6cf5a04",
-    "animation": "a7957b78-2141-476e-a4ec-dac2b45ca0f4",
-    "sha12": "3cf3627c152a"
-  },
-  "clay-baker": {
-    "still": "999ffee4-32b2-4892-a4a4-dbe18e1c1f16",
-    "animation": "62c01bcb-5e72-46aa-9455-6d33d1faba7c",
-    "sha12": "b03c131c1dfc"
-  },
-  "mascot-girl-v1": {
-    "still": "a10b31c5-bf19-4503-9320-a9bfe046f54c",
-    "sha12": "ad400dd1fea6"
-  },
-  "mascot-girl-v2": {
-    "still": "ca61b682-50e7-4875-ac30-98033af6bf8e",
-    "sha12": "f2500057d5fc",
-    "animation": "7ac2ce00-1130-49c3-b4f5-d43e45feab32",
-    "anim_file": "mascot-anim.webp",
-    "anim_sha12": "8b6bacac05e3"
-  },
-  "girl-crochet": {
-    "still": "dba5b2d0-8974-4182-828e-61b8483c9830",
-    "sha12": "e25c7564445d",
-    "animation": "8900e6a7-46af-47cb-8c03-d422cc878357",
-    "anim_file": "girl-crochet-anim.webp",
-    "anim_sha12": "6cd84530cb2b"
-  },
-  "girl-thanks": {
-    "still": "b7c0dec7-cdd2-4ed9-b099-d0efc968653f",
-    "sha12": "db4f7dcf703e",
-    "animation": "0d9c613d-4b4b-48c4-a3bd-44d8f56f57fd",
-    "anim_file": "girl-thanks-anim.webp",
-    "anim_sha12": "9579530743c7"
-  },
-  "girl-sleepy": {
-    "still": "739089d4-4a70-4443-b280-7761ffd5ccac",
-    "sha12": "6e9c85da8065",
-    "animation": "e9322bbb-5c84-4b59-b3a8-b1545164188a",
-    "anim_file": "girl-sleepy-anim.webp",
-    "anim_sha12": "f7f8e5eb4679"
-  },
-  "_note": "Full-size originals of every animation are in originals/. Reuse these asset IDs for new poses/animations instead of regenerating.",
-  "girl-goodbye": {
-    "still": "acf61d35-5033-42ff-ba27-2d59f57cb58f",
-    "sha12": "a90be287d95f",
-    "animation": "426aa29f-e8d7-42ec-b4b4-00ddbf58aa4f",
-    "anim_file": "girl-goodbye-anim.webp",
-    "anim_sha12": "227935222171"
-  },
-  "girl-cart": {
-    "still": "66de727a-68c8-44ea-847c-d34859f0d66a",
-    "sha12": "cfff8a99c390",
-    "animation": "219b99c7-4f3f-47bc-a52b-67d490c1c903",
-    "anim_file": "girl-cart-anim.webp",
-    "anim_sha12": "156ec75d6986"
-  }
+ "mascot-bunny": {
+  "still": "1cd83956-0584-408b-88d3-d61ae3dbc735",
+  "animation": "14174171-3092-49c1-9cfb-8bd2f2e9b462",
+  "sha12": "fe12bc5aa27e"
+ },
+ "mascot-bunny-heart-eyes (alt)": {
+  "still": "2602e3bc-fe30-410f-9684-7f71f1bfd41a"
+ },
+ "cat-crochet": {
+  "still": "2950f38d-7fe8-4a63-83d7-ee93d6508a92",
+  "animation": "8524e1cc-ad5f-4023-8bc3-421cef083dd9",
+  "sha12": "45e792067b53"
+ },
+ "flower-gift": {
+  "still": "72550081-3858-4863-9866-6ca7d6cf5a04",
+  "animation": "a7957b78-2141-476e-a4ec-dac2b45ca0f4",
+  "sha12": "3cf3627c152a"
+ },
+ "clay-baker": {
+  "still": "999ffee4-32b2-4892-a4a4-dbe18e1c1f16",
+  "animation": "62c01bcb-5e72-46aa-9455-6d33d1faba7c",
+  "sha12": "b03c131c1dfc"
+ },
+ "mascot-girl-v1": {
+  "still": "a10b31c5-bf19-4503-9320-a9bfe046f54c",
+  "sha12": "ad400dd1fea6"
+ },
+ "mascot-girl-v2": {
+  "still": "ca61b682-50e7-4875-ac30-98033af6bf8e",
+  "sha12": "f2500057d5fc",
+  "animation": "7ac2ce00-1130-49c3-b4f5-d43e45feab32",
+  "anim_file": "mascot-anim.webp",
+  "anim_sha12": "8b6bacac05e3"
+ },
+ "girl-crochet": {
+  "still": "dba5b2d0-8974-4182-828e-61b8483c9830",
+  "sha12": "e25c7564445d",
+  "animation": "8900e6a7-46af-47cb-8c03-d422cc878357",
+  "anim_file": "girl-crochet-anim.webp",
+  "anim_sha12": "6cd84530cb2b"
+ },
+ "girl-thanks": {
+  "still": "b7c0dec7-cdd2-4ed9-b099-d0efc968653f",
+  "sha12": "db4f7dcf703e",
+  "animation": "0d9c613d-4b4b-48c4-a3bd-44d8f56f57fd",
+  "anim_file": "girl-thanks-anim.webp",
+  "anim_sha12": "9579530743c7"
+ },
+ "girl-sleepy": {
+  "still": "739089d4-4a70-4443-b280-7761ffd5ccac",
+  "sha12": "6e9c85da8065",
+  "animation": "e9322bbb-5c84-4b59-b3a8-b1545164188a",
+  "anim_file": "girl-sleepy-anim.webp",
+  "anim_sha12": "f7f8e5eb4679"
+ },
+ "_note": "Full-size originals of every animation are in originals/. Reuse these asset IDs for new poses/animations instead of regenerating.",
+ "girl-goodbye": {
+  "still": "acf61d35-5033-42ff-ba27-2d59f57cb58f",
+  "sha12": "a90be287d95f",
+  "animation": "426aa29f-e8d7-42ec-b4b4-00ddbf58aa4f",
+  "anim_file": "girl-goodbye-anim.webp",
+  "anim_sha12": "227935222171"
+ },
+ "girl-cart": {
+  "still": "66de727a-68c8-44ea-847c-d34859f0d66a",
+  "sha12": "cfff8a99c390",
+  "animation": "219b99c7-4f3f-47bc-a52b-67d490c1c903",
+  "anim_file": "girl-cart-anim.webp",
+  "anim_sha12": "156ec75d6986"
+ },
+ "sticker-box-hug": {
+  "still": "2823bc8c-e53b-4470-8fe9-d786db393734",
+  "file": "stickers/sticker-box-hug.png",
+  "sha12": "5798a6c2a336",
+  "use": "printable sticker art (not for the website)"
+ },
+ "sticker-clay-strawberry": {
+  "still": "fed4525b-50d1-452f-9b03-d0df8439f493",
+  "file": "stickers/sticker-clay-strawberry.png",
+  "sha12": "71184dca1113",
+  "use": "printable sticker art (not for the website)"
+ },
+ "sticker-clay-painting": {
+  "still": "00b4d62e-18b3-4b70-b4e2-23818308760f",
+  "file": "stickers/sticker-clay-painting.png",
+  "sha12": "f2c187c72dff",
+  "use": "printable sticker art (not for the website)"
+ },
+ "sticker-flowers-twisting": {
+  "still": "58254199-907b-421c-abb5-2babd13250f1",
+  "file": "stickers/sticker-flowers-twisting.png",
+  "sha12": "3bb04b22c48d",
+  "use": "printable sticker art (not for the website)"
+ },
+ "sticker-flowers-bouquet": {
+  "still": "a89b1a7d-76d2-466a-a17c-fe9078935ce1",
+  "file": "stickers/sticker-flowers-bouquet.png",
+  "sha12": "cb8e129d8245",
+  "use": "printable sticker art (not for the website)"
+ },
+ "sticker-crochet-bunny": {
+  "still": "5d71cffb-481f-4f55-bc75-48d0e849dceb",
+  "file": "stickers/sticker-crochet-bunny.png",
+  "sha12": "7cd102db0adc",
+  "use": "printable sticker art (not for the website)"
+ },
+ "sticker-crochet-sleepy": {
+  "still": "14c26dd2-e604-497e-a00a-ec59add4168e",
+  "file": "stickers/sticker-crochet-sleepy.png",
+  "sha12": "7bff19d2e726",
+  "use": "printable sticker art (not for the website)"
+ }
 }
