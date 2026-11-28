@@ -6,7 +6,7 @@
 <title>Cart</title>
 <link rel="icon" href="assets/icon/favicon-32.png" sizes="32x32">
 <link rel="apple-touch-icon" href="assets/icon/apple-touch.png">
-<link rel="stylesheet" href="assets/style.css?v=20261127224918">
+<link rel="stylesheet" href="assets/style.css?v=20261128060727">
 </head>
 <body>
 <header id="site-header"></header>
@@ -54,8 +54,8 @@
   <div id="done-view" class="article" style="display:none"></div>
 </main>
 <script type="module">
-import { sb, getSettings, renderChrome, esc, money, safeUrl, cart } from "./assets/common.js?v=20261127224918";
-import { SUPABASE_URL, SUPABASE_KEY } from "./assets/config.js?v=20261127224918";
+import { sb, getSettings, renderChrome, esc, money, safeUrl, cart } from "./assets/common.js?v=20261128060727";
+import { SUPABASE_URL, SUPABASE_KEY } from "./assets/config.js?v=20261128060727";
 const s = await getSettings();
 renderChrome(s, "cart");
 const $ = (id) => document.getElementById(id);
@@ -228,7 +228,7 @@ $("form").addEventListener("submit", async (e) => {
     ${rest > 0 && data.deposit_cents ? `<p>The remaining <b>${money(rest)}</b> is due ${data.fulfillment === "shipping" ? "before your order ships" : "at pickup"}.</p>` : ""}
     ${hadDigital ? `<p class="digital-box">📄 <b>Your pattern download</b> will appear on your <a href="order.html?n=${n}">order page</a> as soon as I confirm your payment. Bookmark it!</p>` : ""}
     ${data.fulfillment === "digital" ? "" : data.fulfillment === "shipping" ? `<p><b>Shipping:</b> I'll email you tracking when it ships.</p>`
-      : `<p><b>Pickup:</b> ${esc(s.pickup_location)}</p>${s.pickup_instructions ? `<p style="white-space:pre-wrap">${esc(s.pickup_instructions)}</p>` : ""}`}
+      : `<p><b>Pickup:</b> ${esc(s.pickup_location)}</p>${data.pickup_instructions ? `<p style="white-space:pre-wrap">${esc(data.pickup_instructions)}</p>` : ""}`}
     ${data.discount_cents ? `<p>You saved ${money(data.discount_cents)}! 🎉</p>` : ""}
     <p class="muted">Save your order number. <a href="order.html?n=${n}">Check your order status</a> anytime.</p></div>`;
 });

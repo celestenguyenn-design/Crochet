@@ -37,6 +37,9 @@ Deno.serve(async (req) => {
     const { type, id } = await req.json();
     if (!RESEND_API_KEY || !OWNER_EMAIL) return Response.json({ skipped: "email not configured" });
     const { data: s } = await db.from("settings").select("*").eq("id", 1).single();
+    // Pickup address lives in private_settings so it isn't readable from the public site.
+    const { data: ps } = await db.from("private_settings").select("pickup_instructions").eq("id", 1).maybeSingle();
+    s.pickup_instructions = ps?.pickup_instructions || "";
 
     if (type === "order") {
       // Claim the order atomically so it's only ever emailed once.
