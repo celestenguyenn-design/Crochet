@@ -143,9 +143,9 @@
   "use": "printable neutral freebie sticker (not for the website)"
  },
  "neutral-crochet-dragon": {
-  "still": "e5d955fe-45af-46ab-80e1-ce5dc9ced7fe",
+  "still": "6950601f-ea64-4faa-8011-83c6a08c3f7a",
   "file": "stickers/neutral-crochet-dragon.png",
-  "sha12": "308b4f9ab3b6",
+  "sha12": "17775bdc956a",
   "use": "printable neutral freebie sticker (not for the website)"
  },
  "neutral-crochet-cat": {
@@ -153,5 +153,12 @@
   "file": "stickers/neutral-crochet-cat.png",
   "sha12": "d32a77c77091",
   "use": "printable neutral freebie sticker (not for the website)"
+ },
+ "neutral-crochet-dragon-v1": {
+  "still": "e5d955fe-45af-46ab-80e1-ce5dc9ced7fe",
+  "file": "stickers/neutral-crochet-dragon-v1.png",
+  "sha12": "308b4f9ab3b6",
+  "use": "printable neutral freebie sticker (not for the website)",
+  "note": "rejected: looked too AI"
  }
 }

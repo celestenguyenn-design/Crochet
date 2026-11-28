@@ -222,7 +222,7 @@ if __name__ == "__main__":
     usable = PAGE[0] - 2 * MARGIN
     tip = "print at 100% / Actual size on letter sticker paper · cut along the thin grey line"
 
-    box = scaled(box_sticker(), 1.85, 1.85)
+    box = scaled(box_arc("pink", "top"), 1.9, 1.9)   # chosen design: HookedByCeleste curved over her head
     rows = []
     while True:
         row = fill_row([box], usable)
