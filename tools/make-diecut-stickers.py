@@ -58,25 +58,61 @@ BANNERS = {"pink": ((244, 166, 198), (226, 122, 168), (150, 70, 110), (190, 80, 
            "kraft": ((214, 176, 136), (184, 142, 100), (112, 80, 52), (130, 94, 62))}
 
 
-def box_sticker(color="pink"):
+FONTS_DIR = FONT.parent.parent.parent
+def font(name, size):
+    return ImageFont.truetype(str(FONTS_DIR / f"fontsource-{name}/files/{name}-latin-{'700' if name in ('dancing-script', 'baloo-2', 'grandstander') else '400' if name not in ('fredoka',) else '600'}-normal.woff2"), size)
+
+
+def outlined(d, xy, text, f, fill, line, white=10, outer=6):
+    """Sticker-style lettering: coloured letters, a white rim, then a thin dark edge."""
+    d.text(xy, text, font=f, anchor="mm", fill=line, stroke_width=white + outer, stroke_fill=line)
+    d.text(xy, text, font=f, anchor="mm", fill="white", stroke_width=white, stroke_fill="white")
+    d.text(xy, text, font=f, anchor="mm", fill=fill)
+
+
+# lettering styles for the shop name: (font, size, one or two lines, banner?)
+LETTERING = {
+    "stacked": None,                               # the two-line banner
+    "script": ("pacifico", 150, ["Hooked by Celeste"], False),
+    "lobster": ("lobster", 132, ["Hooked by Celeste"], True),
+    "bubbly": ("chewy", 150, ["hooked by celeste"], False),
+    "cherry": ("cherry-bomb-one", 118, ["hooked by", "celeste"], False),
+    "dancing": ("dancing-script", 156, ["Hooked by Celeste"], False),
+}
+
+
+def box_sticker(color="pink", lettering="stacked"):
     light, dark, line, txt = BANNERS[color]
     art = load("sticker-box-hug")
     art = art.resize((900, round(art.height * 900 / art.width)), Image.LANCZOS)
-    W, H = 1100, art.height + 170
+    W, H = 1240, art.height + 230
     c = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     c.alpha_composite(art, ((W - art.width) // 2, 0))
     d = ImageDraw.Draw(c)
-    # ribbon banner with the shop name, stacked on two short lines ("hooked by" / "celeste")
-    by, bh, bx0, bx1 = art.height - 110, 230, 170, W - 170
-    tail = 60
-    for side in (0, 1):
-        x = bx0 if side == 0 else bx1
-        s = 1 if side == 0 else -1
-        d.polygon([(x - s * 30, by + 50), (x + s * (tail + 10), by + 50), (x + s * (tail + 10), by + bh + 30),
-                   (x - s * 30, by + bh + 30), (x + s * 20, by + bh / 2 + 40)], fill=dark, outline=line, width=6)
-    d.rounded_rectangle([bx0 + tail - 20, by, bx1 - tail + 20, by + bh], 34, fill=light, outline=line, width=7)
-    d.text((W / 2, by + 62), "hooked by", font=ImageFont.truetype(str(FONT), 64), anchor="mm", fill="white", stroke_width=5, stroke_fill=txt)
-    d.text((W / 2, by + 152), "celeste", font=ImageFont.truetype(str(FONT), 118), anchor="mm", fill="white", stroke_width=6, stroke_fill=txt)
+    style = LETTERING[lettering]
+    if style is None:
+        # ribbon banner with the shop name, stacked on two short lines ("hooked by" / "celeste")
+        by, bh, bx0, bx1 = art.height - 110, 230, 240, W - 240
+        tail = 60
+        for side in (0, 1):
+            x = bx0 if side == 0 else bx1
+            s = 1 if side == 0 else -1
+            d.polygon([(x - s * 30, by + 50), (x + s * (tail + 10), by + 50), (x + s * (tail + 10), by + bh + 30),
+                       (x - s * 30, by + bh + 30), (x + s * 20, by + bh / 2 + 40)], fill=dark, outline=line, width=6)
+        d.rounded_rectangle([bx0 + tail - 20, by, bx1 - tail + 20, by + bh], 34, fill=light, outline=line, width=7)
+        d.text((W / 2, by + 62), "hooked by", font=ImageFont.truetype(str(FONT), 64), anchor="mm", fill="white", stroke_width=5, stroke_fill=txt)
+        d.text((W / 2, by + 152), "celeste", font=ImageFont.truetype(str(FONT), 118), anchor="mm", fill="white", stroke_width=6, stroke_fill=txt)
+    else:
+        name, size, lines, banner = style
+        f = font(name, size)
+        ty = art.height - 40
+        if banner:
+            bw = d.textlength(lines[0], font=f) + 120
+            d.rounded_rectangle([(W - bw) / 2, ty - 95, (W + bw) / 2, ty + 85], 50, fill=light, outline=line, width=7)
+            d.text((W / 2, ty - 6), lines[0], font=f, anchor="mm", fill="white", stroke_width=6, stroke_fill=txt)
+        else:
+            for i, l in enumerate(lines):
+                outlined(d, (W / 2, ty + i * size * 0.95 - (len(lines) - 1) * size * 0.3), l, f, dark, line)
     # red FRAGILE stamp, tilted, top right
     st = Image.new("RGBA", (470, 160), (0, 0, 0, 0))
     sd = ImageDraw.Draw(st)
@@ -153,6 +189,21 @@ if __name__ == "__main__":
         rows += [fill_row(st, usable), fill_row(st[::-1], usable)]
     save("freebie-sticker-sheet", page(rows, gap_y=0.08, foot=f"Freebie stickers · rows: clay, clay, flowers, flowers, crochet, crochet · {sum(len(r) for r in rows)} per sheet · {tip}"))
 
+    ncats = [("clay", ["neutral-clay-oven", "neutral-clay-mouse"]),
+             ("flowers", ["neutral-flowers-pot", "neutral-flowers-bouquet"]),
+             ("crochet", ["neutral-crochet-dragon", "neutral-crochet-cat"])]
+    rows = []
+    for _, names in ncats:
+        st = [scaled(diecut(load(n)), 1.75, H) for n in names]
+        rows += [fill_row(st, usable), fill_row(st[::-1], usable)]
+    save("freebie-neutral-sticker-sheet", page(rows, gap_y=0.08, foot=f"Neutral freebie stickers · rows: clay, clay, flowers, flowers, crochet, crochet · {sum(len(r) for r in rows)} per sheet · {tip}"))
+    nprev = [scaled(diecut(load(n)), 1.75, H) for _, ns in ncats for n in ns]
+    pv = Image.new("RGB", (sum(s.width for s in nprev) + 60 * (len(nprev) + 1), max(s.height for s in nprev) + 120), (236, 228, 240))
+    x = 60
+    for s_ in nprev:
+        pv.paste(s_, (x, 60), s_); x += s_.width + 60
+    pv.save(OUT / "neutral-sticker-samples.png")
+
     # one of each, for previewing
     prev = [box] + [scaled(diecut(load(n)), 1.75, H) for _, ns in cats for n in ns]
     pv = Image.new("RGB", (sum(s.width for s in prev) + 60 * (len(prev) + 1), max(s.height for s in prev) + 120), (236, 228, 240))
@@ -162,6 +213,16 @@ if __name__ == "__main__":
     pv.save(OUT / "sticker-samples.png")
     # banner colour choices for the box sticker
     opts = [scaled(box_sticker(c), 2.2, 2.2) for c in BANNERS]
+    # lettering choices (pink), labelled
+    lo = [(k, scaled(box_sticker("pink", k), 2.4, 2.4)) for k in LETTERING]
+    f2 = ImageFont.truetype(str(FONT), 54)
+    cols = 3; cw = max(o.width for _, o in lo) + 80; chh = max(o.height for _, o in lo) + 150
+    lv = Image.new("RGB", (cw * cols + 80, chh * 2 + 40), (236, 228, 240)); ld = ImageDraw.Draw(lv)
+    for i, (k, o) in enumerate(lo):
+        x0, y0 = 80 + (i % cols) * cw, 40 + (i // cols) * chh
+        lv.paste(o, (x0 + (cw - 80 - o.width) // 2, y0 + (chh - 150 - o.height)), o)
+        ld.text((x0 + (cw - 80) / 2, y0 + chh - 80), f"{i + 1}", font=f2, anchor="mm", fill=(91, 68, 99))
+    lv.save(OUT / "box-lettering-options.png")
     f = ImageFont.truetype(str(FONT), 54)
     bv = Image.new("RGB", (sum(o.width for o in opts) + 80 * (len(opts) + 1), max(o.height for o in opts) + 200), (236, 228, 240))
     x, d = 80, ImageDraw.Draw(bv)

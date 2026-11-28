@@ -110,5 +110,48 @@
   "file": "stickers/sticker-crochet-sleepy.png",
   "sha12": "7bff19d2e726",
   "use": "printable sticker art (not for the website)"
+ },
+ "neutral-clay-oven-v1": {
+  "still": "ddd79672-2975-4c74-957a-99303aa92289",
+  "file": "stickers/neutral-clay-oven-v1.png",
+  "sha12": "c20a14273cf0",
+  "use": "printable neutral freebie sticker (not for the website)",
+  "note": "first try, before keycap/keychain were requested"
+ },
+ "neutral-clay-oven": {
+  "still": "72ae1cbb-e622-4bfb-9570-736ac41650a0",
+  "file": "stickers/neutral-clay-oven.png",
+  "sha12": "e72b0c97a3e7",
+  "use": "printable neutral freebie sticker (not for the website)"
+ },
+ "neutral-clay-mouse": {
+  "still": "81cebc80-eb30-459e-878d-1c2d5f5b3ecb",
+  "file": "stickers/neutral-clay-mouse.png",
+  "sha12": "db1af76ad4f5",
+  "use": "printable neutral freebie sticker (not for the website)"
+ },
+ "neutral-flowers-pot": {
+  "still": "91de6de9-b871-4a73-8feb-2d2f2dcbff5a",
+  "file": "stickers/neutral-flowers-pot.png",
+  "sha12": "0d832d08467d",
+  "use": "printable neutral freebie sticker (not for the website)"
+ },
+ "neutral-flowers-bouquet": {
+  "still": "bb01abe3-b998-455b-9df8-cf0c0fe9dd6b",
+  "file": "stickers/neutral-flowers-bouquet.png",
+  "sha12": "68a6329994c8",
+  "use": "printable neutral freebie sticker (not for the website)"
+ },
+ "neutral-crochet-dragon": {
+  "still": "e5d955fe-45af-46ab-80e1-ce5dc9ced7fe",
+  "file": "stickers/neutral-crochet-dragon.png",
+  "sha12": "308b4f9ab3b6",
+  "use": "printable neutral freebie sticker (not for the website)"
+ },
+ "neutral-crochet-cat": {
+  "still": "e1b53571-a9cd-4203-9a22-c6dc6910f3b2",
+  "file": "stickers/neutral-crochet-cat.png",
+  "sha12": "d32a77c77091",
+  "use": "printable neutral freebie sticker (not for the website)"
  }
 }
